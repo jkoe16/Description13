@@ -40,7 +40,7 @@ export default function App() {
     account: <Account go={go} />,
   }
 
-  // 울어도 되는 방은 메뉴 없이 화면 전체를 쓴다
+  // 눈물 쉼터는 메뉴 없이 화면 전체를 쓴다
   if (page === 'cry') return <Cry go={go} />
 
   return (

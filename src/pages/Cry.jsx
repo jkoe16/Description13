@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-// 울어도 되는 방: 어두운 화면, 잔잔한 소리, 곁에 있어 주는 말. 아무것도 저장하지 않는다.
+// 눈물 쉼터: 어두운 화면, 잔잔한 소리, 곁에 있어 주는 말. 아무것도 저장하지 않는다.
 
 const WORDS = [
   '여기선 울어도 괜찮아요.',
@@ -113,7 +113,7 @@ function useAmbient(sound, volume) {
     if (master.current && sound !== 'off') master.current.gain.setTargetAtTime(volume, ctxRef.current.currentTime, 0.2)
   }, [volume, sound])
 
-  // 방을 나가면 소리를 완전히 끈다
+  // 쉼터를 나가면 소리를 완전히 끈다
   useEffect(() => () => {
     stop.current?.()
     ctxRef.current?.close()
@@ -152,7 +152,7 @@ export default function Cry({ go }) {
   useAmbient(step === 'room' ? sound : 'off', volume)
   useWakeLock()
 
-  // 방에 있는 동안 휴대폰 상단 막대도 어둡게
+  // 쉼터에 있는 동안 휴대폰 상단 막대도 어둡게
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
     const before = meta?.content
@@ -176,6 +176,7 @@ export default function Cry({ go }) {
     <div className="cry-room">
       <header className="cry-top">
         <button className="cry-ghost" onClick={() => leave('home')}>나가기</button>
+        <h1 className="cry-title">눈물 쉼터</h1>
         <a className="cry-ghost" href="tel:109">위험할 땐 109</a>
       </header>
 
@@ -238,7 +239,7 @@ export default function Cry({ go }) {
               스스로를 해칠 것 같은 생각이 든다면 지금 바로 <a href="tel:109">109</a>에 전화해 주세요. 24시간 받아요.
             </p>
           )}
-          <button className="cry-ghost" onClick={() => setStep('room')}>방에 조금 더 있을래요</button>
+          <button className="cry-ghost" onClick={() => setStep('room')}>쉼터에 조금 더 있을래요</button>
         </main>
       )}
     </div>

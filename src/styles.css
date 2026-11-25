@@ -472,7 +472,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .past-open small { color: var(--ink-soft); font-size: 0.78rem; }
 .chat > .form-error { margin-bottom: 8px; }
 
-/* ---------- 울어도 되는 방 ---------- */
+/* ---------- 눈물 쉼터 ---------- */
 .cry-entry {
   display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
   background: linear-gradient(135deg, #2c2846, #3d3866); color: #ece8ff; border: none;
@@ -489,7 +489,8 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   color: #e9e5fb; overflow-y: auto;
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
-.cry-top { display: flex; justify-content: space-between; padding: 16px 18px; }
+.cry-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px; }
+.cry-title { font-size: 0.95rem; font-weight: 600; color: #cfc8ee; letter-spacing: 0.02em; }
 .cry-ghost {
   padding: 10px 16px; border-radius: 999px; color: #bdb5e0; font-size: 0.9rem; font-weight: 500;
   text-decoration: none; background: rgba(255, 255, 255, 0.06);
