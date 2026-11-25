@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc,
+} from 'firebase/firestore'
 import { CHAT_MODES, EMOTIONS } from '../data.js'
 import Icon from '../components/Icon.jsx'
-import { auth, useUser } from '../firebase.js'
+import { auth, db, useUser } from '../firebase.js'
 
 let nextId = 1
 
@@ -9,6 +12,16 @@ const MAX_CHARS = 500 // 서버 제한과 같게 유지
 const HISTORY = 10 // 서버로 보내는 최근 메시지 수
 
 const AUTH_ERRORS = ['login', 'not_verified', 'not_allowed', 'auth_setup']
+const SAVE_MAX = 200 // 대화 하나에 저장하는 최대 메시지 수 (보안 규칙과 같게)
+const LIST_MAX = 30 // 지난 대화 목록에 보여 줄 수
+const when = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+const greeting = (picked) => ({
+  id: nextId++, from: 'bot',
+  text: picked
+    ? `'${picked.label}' 마음으로 와 주었군요. 어떤 일이 있었는지 편하게 들려주세요.`
+    : '안녕하세요, 마음곁이에요. 오늘 어떤 이야기를 나누고 싶나요?',
+})
 
 const SOS = [
   { number: '109', label: '자살예방상담 (24시간)' },
@@ -29,12 +42,13 @@ export default function Chat({ mood, go }) {
   const [text, setText] = useState('')
   const [typing, setTyping] = useState(false)
   const user = useUser()
-  const [messages, setMessages] = useState(() => [{
-    id: nextId++, from: 'bot',
-    text: picked
-      ? `'${picked.label}' 마음으로 와 주었군요. 어떤 일이 있었는지 편하게 들려주세요.`
-      : '안녕하세요, 마음곁이에요. 오늘 어떤 이야기를 나누고 싶나요?',
-  }])
+  const [messages, setMessages] = useState(() => [greeting(picked)])
+  const cloud = Boolean(user && db) // 로그인하면 대화를 계정에 저장 (users/{uid}/chats)
+  const [showPast, setShowPast] = useState(false)
+  const [past, setPast] = useState(null) // null = 불러오는 중
+  const [saveError, setSaveError] = useState(false)
+  const chatId = useRef(null)
+  const lastSaved = useRef('')
   const endRef = useRef(null)
   const request = useRef(null)
   const inputRef = useRef(null)
@@ -47,6 +61,51 @@ export default function Chat({ mood, go }) {
 
   // 화면을 떠나면 진행 중인 요청을 취소
   useEffect(() => () => request.current?.abort(), [])
+
+  // 대화가 바뀔 때마다 계정에 저장 (오류·긴급 카드는 저장하지 않음)
+  useEffect(() => {
+    if (!cloud || !started) return
+    const saved = messages.filter((m) => m.from === 'me' || m.from === 'bot')
+      .slice(-SAVE_MAX).map((m) => ({ from: m.from, text: m.text }))
+    const json = JSON.stringify([mode, saved])
+    if (json === lastSaved.current) return
+    lastSaved.current = json
+    if (!chatId.current) chatId.current = doc(collection(db, 'users', user.uid, 'chats')).id
+    const title = (saved.find((m) => m.from === 'me')?.text || '대화').slice(0, 40)
+    setDoc(doc(db, 'users', user.uid, 'chats', chatId.current), { title, mode, messages: saved, updatedAt: serverTimestamp() })
+      .then(() => setSaveError(false), () => setSaveError(true))
+  }, [messages, mode, cloud, started, user?.uid])
+
+  // 지난 대화 목록 (패널을 열었을 때만 불러옴)
+  useEffect(() => {
+    if (!cloud || !showPast) return
+    setPast(null)
+    const q = query(collection(db, 'users', user.uid, 'chats'), orderBy('updatedAt', 'desc'), limit(LIST_MAX))
+    return onSnapshot(q, (snap) => setPast(snap.docs.map((d) => {
+      const v = d.data({ serverTimestamps: 'estimate' })
+      return { id: d.id, ...v, updatedAt: v.updatedAt?.toDate() || new Date() }
+    })), () => setPast([]))
+  }, [cloud, showPast, user?.uid])
+
+  const reset = (list, id = null, m = mode) => {
+    request.current?.abort()
+    busy.current = false
+    setTyping(false)
+    chatId.current = id
+    lastSaved.current = id ? JSON.stringify([m, list.map(({ from, text }) => ({ from, text }))]) : ''
+    setMode(m)
+    setMessages(list)
+    setShowPast(false)
+    setSaveError(false)
+  }
+
+  const newChat = () => reset([greeting(null)])
+  const openChat = (c) => reset((c.messages || []).map((m) => ({ id: nextId++, from: m.from, text: m.text })), c.id,
+    CHAT_MODES.some((x) => x.id === c.mode) ? c.mode : 'listen')
+  const removeChat = (id) => {
+    deleteDoc(doc(db, 'users', user.uid, 'chats', id)).catch(() => {})
+    if (chatId.current === id) newChat()
+  }
 
   // 줄바꿈에 맞춰 입력창 높이 조절
   useEffect(() => {
@@ -124,6 +183,8 @@ export default function Chat({ mood, go }) {
           <p className="muted">어떤 방식으로 곁에 있어 줄까요?</p>
         </div>
         <div className="head-actions">
+          {cloud && <button className={'pill' + (showPast ? ' on' : '')} aria-expanded={showPast} onClick={() => setShowPast((v) => !v)}>지난 대화</button>}
+          {cloud && started && <button className="pill" onClick={newChat}>새 대화</button>}
           <button className="pill" onClick={() => go('account')}>{user ? '내 계정' : '로그인'}</button>
           <button className="pill sos" onClick={() => go('help')}>위험할 땐 109</button>
         </div>
@@ -139,8 +200,36 @@ export default function Chat({ mood, go }) {
         ))}
       </div>
 
+      {showPast && cloud && (
+        <section className="card past-chats" aria-label="지난 대화">
+          <h2>지난 대화</h2>
+          {past === null ? (
+            <p className="muted">불러오고 있어요…</p>
+          ) : past.length === 0 ? (
+            <p className="muted">아직 저장된 대화가 없어요.</p>
+          ) : (
+            <ul>
+              {past.map((c) => (
+                <li key={c.id} className={chatId.current === c.id ? 'current' : ''}>
+                  <button className="past-open" onClick={() => openChat(c)}>
+                    <strong>{c.title}</strong>
+                    <small>{when.format(c.updatedAt)} · 메시지 {c.messages?.length || 0}개</small>
+                  </button>
+                  <button className="link" onClick={() => removeChat(c.id)}>지우기</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section className="chat card">
-        <p className="notice">AI가 답해요. 전문 상담을 대신할 수 없고, 대화 내용은 저장하지 않아요.</p>
+        <p className="notice">
+          {cloud
+            ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
+            : 'AI가 답해요. 전문 상담을 대신할 수 없고, 대화 내용은 저장하지 않아요.'}
+        </p>
+        {saveError && <p className="form-error" role="alert">대화를 저장하지 못했어요. 인터넷 연결을 확인해 주세요.</p>}
         <div className="messages" aria-live="polite">
           {messages.map((m) => {
             if (m.from === 'crisis') {

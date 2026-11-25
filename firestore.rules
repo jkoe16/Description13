@@ -1,5 +1,5 @@
 rules_version = '2';
-// 마음 기록: 로그인한 본인만 자기 기록을 읽고, 쓰고, 지울 수 있다. (기록은 고치지 않음)
+// 마음 기록과 마음 대화: 로그인한 본인만 자기 것을 읽고, 쓰고, 지울 수 있다.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/journal/{entryId} {
@@ -10,6 +10,15 @@ service cloud.firestore {
         && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 5
         && request.resource.data.note is string && request.resource.data.note.size() <= 300
         && request.resource.data.at == request.time;
+    }
+    match /users/{uid}/chats/{chatId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['title', 'mode', 'messages', 'updatedAt'])
+        && request.resource.data.title is string && request.resource.data.title.size() <= 40
+        && request.resource.data.mode is string && request.resource.data.mode.size() <= 20
+        && request.resource.data.messages is list && request.resource.data.messages.size() <= 200
+        && request.resource.data.updatedAt == request.time;
     }
   }
 }
