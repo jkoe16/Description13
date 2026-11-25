@@ -38,12 +38,19 @@ const STARTERS = [
   '그냥 편하게 이야기하고 싶어요.',
 ]
 
+// 오래 쉬던 무료 서버가 깨어나는 동안 보여 주는 말. 기다림이 길어질수록 조금씩 바뀐다.
+const SLOW_NOTES = [
+  '천천히 읽고 있어요. 조금만 기다려 줘요.',
+  '오래 쉬고 있던 서버를 깨우는 중이라 조금 늦어요. 그동안 숨을 한 번 길게 내쉬어 볼까요?',
+  '거의 다 왔어요. 처음 한 번만 이렇게 늦고, 다음부터는 금방 답할게요.',
+]
+
 export default function Chat({ mood, go }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
   const [mode, setMode] = useState('listen')
   const [text, setText] = useState('')
   const [typing, setTyping] = useState(false)
-  const [slow, setSlow] = useState(false) // 서버가 깨어나는 중이라 답이 늦을 때
+  const [slow, setSlow] = useState(0) // 답이 늦을 때 단계: 0 = 안 늦음, 1 = 5초, 2 = 15초, 3 = 30초 넘음
   const user = useUser()
   const [messages, setMessages] = useState(() => [greeting(picked)])
   const cloud = Boolean(user && db) // 로그인하면 대화를 계정에 저장 (users/{uid}/chats)
@@ -106,7 +113,7 @@ export default function Chat({ mood, go }) {
     request.current?.abort()
     busy.current = false
     setTyping(false)
-    setSlow(false)
+    setSlow(0)
     chatId.current = id
     lastSaved.current = id ? JSON.stringify([m, list.map(({ from, text }) => ({ from, text }))]) : ''
     setMode(m)
@@ -140,7 +147,8 @@ export default function Chat({ mood, go }) {
       .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', text: m.text }))
     const controller = new AbortController()
     request.current = controller
-    const slowTimer = setTimeout(() => setSlow(true), 5000)
+    const slowTimers = [5000, 15000, 30000].map((ms, i) => setTimeout(() => setSlow(i + 1), ms))
+    const clearSlow = () => slowTimers.forEach(clearTimeout)
     let added = []
     try {
       const token = auth?.currentUser ? await auth.currentUser.getIdToken() : ''
@@ -156,7 +164,7 @@ export default function Chat({ mood, go }) {
         ? { id: nextId++, from: 'bot', text: data.reply }
         : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needLogin: AUTH_ERRORS.includes(data.error), retry: !['too_long', 'no_key', ...AUTH_ERRORS].includes(data.error) })
     } catch (e) {
-      if (e.name === 'AbortError') return clearTimeout(slowTimer)
+      if (e.name === 'AbortError') return clearSlow()
       added.push({ id: nextId++, from: 'error', text: '인터넷 연결을 확인하고 다시 시도해 주세요.', retry: true })
     }
     setMessages((m) => {
@@ -164,8 +172,8 @@ export default function Chat({ mood, go }) {
       const recent = m.slice(-4).some((x) => x.from === 'crisis')
       return [...m, ...added.filter((x) => !(x.from === 'crisis' && recent))]
     })
-    clearTimeout(slowTimer)
-    setSlow(false)
+    clearSlow()
+    setSlow(0)
     setTyping(false)
     busy.current = false
     inputRef.current?.focus()
@@ -301,7 +309,7 @@ export default function Chat({ mood, go }) {
             <div className="bubble-row bot">
               <span className="avatar">곁</span>
               <div className="bubble typing"><i /><i /><i /></div>
-              {slow && <small className="slow-note">잠들어 있던 서버를 깨우고 있어요. 길면 30초쯤 걸려요.</small>}
+              {slow > 0 && <small className="slow-note" aria-live="polite">{SLOW_NOTES[slow - 1]}</small>}
             </div>
           )}
           <div ref={endRef} />
