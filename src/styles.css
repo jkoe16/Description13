@@ -524,3 +524,18 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .cry-tip { color: #bdb5e0; font-size: 0.95rem; }
 .cry-sos { color: #f3c9a9; font-size: 0.9rem; line-height: 1.6; }
 .cry-sos a { color: #ffd9bd; font-weight: 700; }
+.slow-note { align-self: center; color: var(--ink-soft); font-size: 0.8rem; }
+
+/* ---------- 내 데이터 · 개인정보 ---------- */
+.account-page { display: grid; gap: 16px; align-content: start; }
+.my-data, .privacy { max-width: 440px; display: grid; gap: 12px; }
+.data-actions { display: grid; gap: 8px; }
+.data-row { display: grid; gap: 8px; justify-items: start; }
+.data-row p { font-size: 0.9rem; }
+.data-row.danger .btn.ghost { color: #a0603a; border-color: rgba(160, 96, 58, 0.3); }
+.btn.danger-btn { background: #b5653c; color: #fff; }
+.btn.danger-btn:hover:not(:disabled) { background: #9d5530; }
+.privacy ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 0.88rem; line-height: 1.6; color: var(--ink-soft); }
+.privacy b { color: var(--ink); }
+.privacy a { color: var(--lavender-deep); font-weight: 700; }
+.notice .link { font-size: inherit; }

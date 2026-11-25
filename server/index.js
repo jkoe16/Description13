@@ -17,6 +17,11 @@ const TYPES = {
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname)
   if (path === '/api/chat') return handleChat(req, res)
+  // 앱을 열 때 잠든 서버를 미리 깨우는 용도. 아무 정보도 주고받지 않는다.
+  if (path === '/api/health') {
+    res.setHeader('Cache-Control', 'no-store')
+    return res.end('ok')
+  }
 
   const file = normalize(join(DIST, path === '/' ? 'index.html' : path))
   if (!file.startsWith(DIST.endsWith(sep) ? DIST : DIST + sep)) {

@@ -41,6 +41,7 @@ export default function Chat({ mood, go }) {
   const [mode, setMode] = useState('listen')
   const [text, setText] = useState('')
   const [typing, setTyping] = useState(false)
+  const [slow, setSlow] = useState(false) // 서버가 깨어나는 중이라 답이 늦을 때
   const user = useUser()
   const [messages, setMessages] = useState(() => [greeting(picked)])
   const cloud = Boolean(user && db) // 로그인하면 대화를 계정에 저장 (users/{uid}/chats)
@@ -91,6 +92,7 @@ export default function Chat({ mood, go }) {
     request.current?.abort()
     busy.current = false
     setTyping(false)
+    setSlow(false)
     chatId.current = id
     lastSaved.current = id ? JSON.stringify([m, list.map(({ from, text }) => ({ from, text }))]) : ''
     setMode(m)
@@ -124,6 +126,7 @@ export default function Chat({ mood, go }) {
       .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', text: m.text }))
     const controller = new AbortController()
     request.current = controller
+    const slowTimer = setTimeout(() => setSlow(true), 5000)
     let added = []
     try {
       const token = auth?.currentUser ? await auth.currentUser.getIdToken() : ''
@@ -139,7 +142,7 @@ export default function Chat({ mood, go }) {
         ? { id: nextId++, from: 'bot', text: data.reply }
         : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needLogin: AUTH_ERRORS.includes(data.error), retry: !['too_long', 'no_key', ...AUTH_ERRORS].includes(data.error) })
     } catch (e) {
-      if (e.name === 'AbortError') return
+      if (e.name === 'AbortError') return clearTimeout(slowTimer)
       added.push({ id: nextId++, from: 'error', text: '인터넷 연결을 확인하고 다시 시도해 주세요.', retry: true })
     }
     setMessages((m) => {
@@ -147,6 +150,8 @@ export default function Chat({ mood, go }) {
       const recent = m.slice(-4).some((x) => x.from === 'crisis')
       return [...m, ...added.filter((x) => !(x.from === 'crisis' && recent))]
     })
+    clearTimeout(slowTimer)
+    setSlow(false)
     setTyping(false)
     busy.current = false
     inputRef.current?.focus()
@@ -228,6 +233,7 @@ export default function Chat({ mood, go }) {
           {cloud
             ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
             : 'AI가 답해요. 전문 상담을 대신할 수 없고, 대화 내용은 저장하지 않아요.'}
+          {' '}<button className="link" onClick={() => go('account')}>개인정보 안내</button>
         </p>
         {saveError && <p className="form-error" role="alert">대화를 저장하지 못했어요. 인터넷 연결을 확인해 주세요.</p>}
         <div className="messages" aria-live="polite">
@@ -281,6 +287,7 @@ export default function Chat({ mood, go }) {
             <div className="bubble-row bot">
               <span className="avatar">곁</span>
               <div className="bubble typing"><i /><i /><i /></div>
+              {slow && <small className="slow-note">잠들어 있던 서버를 깨우고 있어요. 길면 30초쯤 걸려요.</small>}
             </div>
           )}
           <div ref={endRef} />

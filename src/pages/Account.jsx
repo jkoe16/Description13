@@ -4,6 +4,7 @@ import {
   sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut,
 } from 'firebase/auth'
 import { auth, authMessage, firebaseReady, useUser } from '../firebase.js'
+import MyData, { PrivacyNote } from '../components/MyData.jsx'
 
 export default function Account({ go }) {
   const user = useUser()
@@ -140,6 +141,9 @@ export default function Account({ go }) {
         {error && <p className="form-error" role="alert">{error}</p>}
         {info && <p className="form-info" role="status">{info}</p>}
       </section>
+
+      {firebaseReady && user && <MyData />}
+      <PrivacyNote />
     </div>
   )
 }

@@ -45,6 +45,36 @@ const BASE_INSTRUCTIONS = `너는 '마음곁'이라는 웹 앱의 대화 상대�
 - 자해나 자살의 방법, 수단, 치사량 같은 정보는 어떤 이유로도 알려 주지 않아요.
 - 비난하거나 겁주지 않고, 혼자가 아니라는 것을 전해요.`
 
+const RISK_NOTE = `답은 JSON으로만 해요. reply에는 상대에게 보낼 말을, risk에는 이번 대화의 위험도를 적어요.
+- "crisis": 자해·자살 생각이나 계획, 죽고 싶다는 마음을 직접이든 돌려서든 내비침(예: "다 그만하고 싶어", "내일이 안 왔으면", "없어지고 싶어"), 다른 사람을 해칠 위험, 폭력·학대로 지금 위험한 상황.
+- "concern": 아주 지치고 절망적이지만 위험 신호는 뚜렷하지 않음.
+- "none": 그 밖의 경우.
+애매하면 한 단계 높게 판단해요. risk가 "crisis"이면 reply는 위의 "위기 상황" 지침을 따라요.`
+
+const RISK_FORMAT = {
+  type: 'json_schema',
+  name: 'maeumgyeot_reply',
+  strict: true,
+  schema: {
+    type: 'object',
+    properties: {
+      reply: { type: 'string' },
+      risk: { type: 'string', enum: ['none', 'concern', 'crisis'] },
+    },
+    required: ['reply', 'risk'],
+    additionalProperties: false,
+  },
+}
+
+// 구조화된 답을 읽는다. 형식이 깨졌으면 글 전체를 답으로 쓰고 위험도는 모른다고 본다.
+function parseReply(raw) {
+  try {
+    const j = JSON.parse(raw)
+    if (typeof j.reply === 'string' && j.reply.trim()) return { reply: j.reply.trim(), risk: j.risk }
+  } catch { /* 아래로 */ }
+  return { reply: raw, risk: 'unknown' }
+}
+
 const CRISIS_NOTE = '이번 메시지에는 자해·자살 또는 위험 상황을 암시하는 표현이 있어요. 위의 "위기 상황" 지침을 반드시 따르고, 대화 방식보다 안전을 우선해요.'
 
 // 위기 표현 감지 (AI 판단과 별도로 화면에 긴급 연락처를 띄우기 위한 보조 장치)
@@ -54,6 +84,10 @@ const CRISIS_PATTERNS = [
   /(삶|인생|목숨|모든\s*걸|다)\s*을?\s*끝내고\s*싶/, /손목을?\s*(긋|그)/, /유서/,
   /약을?\s*(전부|많이|한꺼번에|몽땅)/, /살\s*이유가?\s*없/, /살아야\s*할\s*이유/,
   /죽이고\s*싶/, /때려\s*죽/, /폭행/, /학대/,
+  // 돌려 말하는 표현
+  /다\s*그만\s*하고\s*싶/, /그만\s*살고\s*싶/, /내일이\s*안\s*(왔으면|오면)/, /눈을?\s*(안|못)\s*떴으면/,
+  /영원히\s*(잠들|자)고?\s*싶/, /(세상|이\s*세상)에서?\s*없어지/, /태어나지\s*(말|않)았/, /나\s*같은\s*건?\s*없는\s*게/,
+  /다\s*끝내\s*버리/, /마지막\s*인사/, /모두에게\s*미안/, /짐이\s*되기\s*싫/, /살아서\s*뭐\s*해/, /사는\s*게\s*의미\s*없/,
 ]
 export const isCrisis = (text) => CRISIS_PATTERNS.some((re) => re.test(text))
 
@@ -180,7 +214,7 @@ export async function handleChat(req, res) {
   const key = process.env.OPENAI_API_KEY
   if (!key) return fail(res, 'no_key', { crisis })
 
-  const instructions = [BASE_INSTRUCTIONS, MODES[mode], crisis ? CRISIS_NOTE : ''].filter(Boolean).join('\n\n')
+  const instructions = [BASE_INSTRUCTIONS, MODES[mode], crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
@@ -195,7 +229,7 @@ export async function handleChat(req, res) {
         input: history.map((m) => ({ role: m.role, content: m.text })),
         max_output_tokens: MAX_OUTPUT_TOKENS,
         reasoning: { effort: process.env.OPENAI_REASONING_EFFORT || 'none' },
-        text: { verbosity: 'low' },
+        text: { verbosity: 'low', format: RISK_FORMAT },
         store: false,
       }),
     })
@@ -212,12 +246,13 @@ export async function handleChat(req, res) {
     }
 
     const data = await r.json()
-    const reply = extractText(data)
+    const { reply, risk } = parseReply(extractText(data))
     if (!reply) {
       console.error(`[chat] empty reply (${data.status || ''} ${data.incomplete_details?.reason || ''})`)
       return fail(res, 'upstream', { crisis })
     }
-    return send(res, 200, { reply, crisis })
+    // 단어 감지 또는 AI 판단 중 하나라도 위기면 화면에 긴급 연락처를 띄운다
+    return send(res, 200, { reply, crisis: crisis || risk === 'crisis' })
   } catch (e) {
     console.error(`[chat] ${e.name === 'AbortError' ? 'timeout' : 'network error'}`)
     return fail(res, e.name === 'AbortError' ? 'timeout' : 'upstream', { crisis })
