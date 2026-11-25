@@ -197,9 +197,26 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   background: var(--lavender-soft); border-color: transparent; box-shadow: none;
   border-bottom-left-radius: 20px; border-bottom-right-radius: 6px;
 }
-.sample-tag {
-  display: block; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line);
-  font-size: 0.72rem; color: var(--ink-soft);
+.bubble.error { background: var(--peach-soft); border-color: transparent; color: #7a4a2c; display: grid; gap: 10px; justify-items: start; }
+.crisis-card {
+  margin-left: 44px; padding: 18px; border-radius: var(--radius-sm); display: grid; gap: 10px;
+  background: linear-gradient(135deg, var(--peach-soft), #fff); border: 1px solid rgba(160, 96, 58, 0.25);
+  animation: fadeUp 0.3s ease;
+}
+.crisis-card p { color: var(--ink-soft); font-size: 0.9rem; line-height: 1.6; }
+.crisis-card .link { justify-self: start; }
+.crisis-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.crisis-call {
+  display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; text-decoration: none;
+  background: #fff; color: var(--ink); border: 1px solid var(--line);
+}
+.crisis-call b { font-size: 1.3rem; color: #a0603a; }
+.crisis-call small { font-size: 0.75rem; color: var(--ink-soft); }
+.crisis-call:hover { border-color: #a0603a; }
+.char-count { text-align: right; font-size: 0.75rem; color: var(--ink-soft); padding: 0 18px 10px; margin-top: -6px; background: rgba(255, 255, 255, 0.7); }
+@media (max-width: 860px) {
+  .crisis-card { margin-left: 0; }
+  .crisis-actions { grid-template-columns: 1fr; }
 }
 .starters { margin: 4px 0 0 44px; animation: fadeUp 0.3s ease; }
 .starters p { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 10px; }
@@ -412,3 +429,6 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 @media (max-width: 380px) {
   .emotion-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+.code-form { display: flex; gap: 8px; width: 100%; }
+.code-form input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 10px; font: inherit; background: #fff; }

@@ -1,0 +1,15 @@
+# Render 배포 설정 (Dashboard → New → Blueprint 에서 이 저장소를 고르면 자동으로 읽어요)
+services:
+  - type: web
+    name: maeumgyeot
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: TRUST_PROXY
+        value: "1"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ACCESS_CODE
+        sync: false

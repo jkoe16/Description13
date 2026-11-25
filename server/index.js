@@ -1,0 +1,36 @@
+// 배포용 최소 서버: 빌드된 화면(dist)과 /api/chat을 함께 제공한다. (Node 내장 모듈만 사용)
+// 실행: npm run build && npm start
+import { createServer } from 'node:http'
+import { readFile } from 'node:fs/promises'
+import { extname, join, normalize, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { handleChat } from './chat.js'
+
+const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
+const PORT = Number(process.env.PORT) || 3000
+const TYPES = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json',
+}
+
+createServer(async (req, res) => {
+  const path = decodeURIComponent(new URL(req.url, 'http://x').pathname)
+  if (path === '/api/chat') return handleChat(req, res)
+
+  const file = normalize(join(DIST, path === '/' ? 'index.html' : path))
+  if (!file.startsWith(DIST.endsWith(sep) ? DIST : DIST + sep)) {
+    res.statusCode = 403
+    return res.end()
+  }
+  try {
+    const body = await readFile(file)
+    res.setHeader('Content-Type', TYPES[extname(file)] || 'application/octet-stream')
+    res.end(body)
+  } catch {
+    res.statusCode = 404
+    res.end('Not found')
+  }
+}).listen(PORT, () => {
+  console.log(`마음곁 서버: http://localhost:${PORT}`)
+  if (!process.env.OPENAI_API_KEY) console.log('경고: OPENAI_API_KEY가 설정되지 않아 마음 대화가 동작하지 않아요.')
+})

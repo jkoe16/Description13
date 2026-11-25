@@ -4,6 +4,17 @@ import Icon from '../components/Icon.jsx'
 
 let nextId = 1
 
+const MAX_CHARS = 500 // 서버 제한과 같게 유지
+const HISTORY = 10 // 서버로 보내는 최근 메시지 수
+
+const CODE_KEY = 'maeumgyeot-access-code' // 접속 암호는 이 기기 브라우저에만 저장
+
+const SOS = [
+  { number: '109', label: '자살예방상담 (24시간)' },
+  { number: '112', label: '경찰 · 위험한 상황' },
+  { number: '119', label: '응급 상황' },
+]
+
 const STARTERS = [
   '오늘 있었던 일을 이야기하고 싶어요.',
   '요즘 마음이 복잡해요.',
@@ -16,15 +27,15 @@ export default function Chat({ mood, go }) {
   const [mode, setMode] = useState('listen')
   const [text, setText] = useState('')
   const [typing, setTyping] = useState(false)
+  const [code, setCode] = useState('')
   const [messages, setMessages] = useState(() => [{
     id: nextId++, from: 'bot',
     text: picked
       ? `'${picked.label}' 마음으로 와 주었군요. 어떤 일이 있었는지 편하게 들려주세요.`
       : '안녕하세요, 마음곁이에요. 오늘 어떤 이야기를 나누고 싶나요?',
   }])
-  const count = useRef(0)
   const endRef = useRef(null)
-  const timer = useRef(null)
+  const request = useRef(null)
   const inputRef = useRef(null)
   const busy = useRef(false)
   const started = messages.some((m) => m.from === 'me')
@@ -33,7 +44,8 @@ export default function Chat({ mood, go }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, typing])
 
-  useEffect(() => () => clearTimeout(timer.current), [])
+  // 화면을 떠나면 진행 중인 요청을 취소
+  useEffect(() => () => request.current?.abort(), [])
 
   // 줄바꿈에 맞춰 입력창 높이 조절
   useEffect(() => {
@@ -43,21 +55,64 @@ export default function Chat({ mood, go }) {
     el.style.height = el.scrollHeight + 'px'
   }, [text])
 
+  const ask = async (list) => {
+    busy.current = true
+    setTyping(true)
+    const history = list
+      .filter((m) => m.from === 'me' || m.from === 'bot')
+      .slice(-HISTORY)
+      .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', text: m.text }))
+    const controller = new AbortController()
+    request.current = controller
+    let added = []
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Access-Code': localStorage.getItem(CODE_KEY) || '' },
+        body: JSON.stringify({ mode, messages: history }),
+        signal: controller.signal,
+      })
+      const data = await r.json().catch(() => ({}))
+      if (data.crisis) added.push({ id: nextId++, from: 'crisis' })
+      added.push(r.ok && data.reply
+        ? { id: nextId++, from: 'bot', text: data.reply }
+        : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needCode: data.error === 'access', retry: !['too_long', 'no_key', 'access'].includes(data.error) })
+    } catch (e) {
+      if (e.name === 'AbortError') return
+      added.push({ id: nextId++, from: 'error', text: '인터넷 연결을 확인하고 다시 시도해 주세요.', retry: true })
+    }
+    setMessages((m) => {
+      // 긴급 연락처 카드는 최근에 이미 보여 줬다면 반복하지 않는다
+      const recent = m.slice(-4).some((x) => x.from === 'crisis')
+      return [...m, ...added.filter((x) => !(x.from === 'crisis' && recent))]
+    })
+    setTyping(false)
+    busy.current = false
+    inputRef.current?.focus()
+  }
+
   const send = (raw = text) => {
     const value = raw.trim()
-    if (!value || busy.current) return
-    busy.current = true
-    setMessages((m) => [...m, { id: nextId++, from: 'me', text: value }])
+    if (!value || busy.current || value.length > MAX_CHARS) return
+    const next = [...messages.filter((m) => m.from !== 'error'), { id: nextId++, from: 'me', text: value }]
+    setMessages(next)
     setText('')
-    setTyping(true)
-    const replies = CHAT_MODES.find((m) => m.id === mode).replies
-    const reply = replies[count.current++ % replies.length]
-    timer.current = setTimeout(() => {
-      setMessages((m) => [...m, { id: nextId++, from: 'bot', text: reply, sample: true }])
-      setTyping(false)
-      busy.current = false
-      inputRef.current?.focus()
-    }, 900)
+    ask(next)
+  }
+
+  const retry = () => {
+    if (busy.current) return
+    const next = messages.filter((m) => m.from !== 'error')
+    setMessages(next)
+    ask(next)
+  }
+
+  const submitCode = (e) => {
+    e.preventDefault()
+    if (!code.trim()) return
+    localStorage.setItem(CODE_KEY, code.trim())
+    setCode('')
+    retry()
   }
 
   const onKey = (e) => {
@@ -88,17 +143,50 @@ export default function Chat({ mood, go }) {
       </div>
 
       <section className="chat card">
-        <p className="notice">UI 초안이에요. 아직 AI가 연결되지 않아 답변은 정해진 예시 문구로 나와요.</p>
+        <p className="notice">AI가 답해요. 전문 상담을 대신할 수 없고, 대화 내용은 저장하지 않아요.</p>
         <div className="messages" aria-live="polite">
-          {messages.map((m) => (
-            <div key={m.id} className={'bubble-row ' + m.from}>
-              {m.from === 'bot' && <span className="avatar">곁</span>}
-              <div className="bubble">
-                {m.text}
-                {m.sample && <span className="sample-tag">예시 답변</span>}
+          {messages.map((m) => {
+            if (m.from === 'crisis') {
+              return (
+                <div key={m.id} className="crisis-card" role="alert">
+                  <strong>지금 많이 힘들다면, 혼자 견디지 않아도 돼요.</strong>
+                  <p>바로 전화할 수 있는 곳이에요. 곁에 있는 믿을 수 있는 사람에게도 지금 알려 주세요.</p>
+                  <div className="crisis-actions">
+                    {SOS.map((s) => (
+                      <a key={s.number} className="crisis-call" href={`tel:${s.number}`}>
+                        <b>{s.number}</b><small>{s.label}</small>
+                      </a>
+                    ))}
+                  </div>
+                  <button className="link" onClick={() => go('help')}>다른 상담기관 보기</button>
+                </div>
+              )
+            }
+            if (m.from === 'error') {
+              return (
+                <div key={m.id} className="bubble-row bot">
+                  <span className="avatar">곁</span>
+                  <div className="bubble error" role="alert">
+                    {m.text}
+                    {m.retry && <button className="btn soft small" onClick={retry}>다시 시도</button>}
+                    {m.needCode && (
+                      <form className="code-form" onSubmit={submitCode}>
+                        <input type="password" value={code} onChange={(e) => setCode(e.target.value)}
+                          placeholder="접속 암호" aria-label="접속 암호" autoComplete="current-password" />
+                        <button className="btn soft small" disabled={!code.trim()}>확인</button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div key={m.id} className={'bubble-row ' + m.from}>
+                {m.from === 'bot' && <span className="avatar">곁</span>}
+                <div className="bubble">{m.text}</div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           {!started && (
             <div className="starters">
               <p>이렇게 시작해 볼 수도 있어요</p>
@@ -120,11 +208,14 @@ export default function Chat({ mood, go }) {
 
         <div className="composer">
           <textarea ref={inputRef} rows={1} value={text} placeholder="마음속 이야기를 적어 주세요"
-            onChange={(e) => setText(e.target.value)} onKeyDown={onKey} aria-label="메시지 입력" />
+            maxLength={MAX_CHARS} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} aria-label="메시지 입력" />
           <button className="send" onClick={() => send()} disabled={!text.trim() || typing} aria-label="보내기">
             <Icon name="send" size={20} />
           </button>
         </div>
+        {text.length > MAX_CHARS - 100 && (
+          <p className="char-count">{text.length}/{MAX_CHARS}</p>
+        )}
       </section>
     </div>
   )

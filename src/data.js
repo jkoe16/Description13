@@ -26,26 +26,11 @@ export const EMOTIONS = [
 ]
 
 export const CHAT_MODES = [
-  { id: 'listen', label: '경청', desc: '조용히 들어 줘요',
-    replies: [
-      '그랬군요. 천천히, 하고 싶은 만큼 더 이야기해 주세요. 여기서 듣고 있을게요.',
-      '말해 줘서 고마워요. 그다음엔 어떤 일이 있었는지 들려줄 수 있을까요?',
-    ] },
-  { id: 'empathy', label: '공감', desc: '마음을 함께 느껴요',
-    replies: [
-      '그런 일이 있었다면 정말 마음이 무거웠을 것 같아요. 그렇게 느끼는 건 당연해요.',
-      '얼마나 속상했을지 조금은 알 것 같아요. 그 마음, 혼자 품고 있지 않아도 돼요.',
-    ] },
-  { id: 'think', label: '함께 생각하기', desc: '천천히 정리해 봐요',
-    replies: [
-      '지금 가장 마음에 걸리는 부분이 무엇인지 하나만 같이 골라 볼까요?',
-      '그 상황에서 내가 바꿀 수 있는 것과 바꿀 수 없는 것을 나눠 보면 어떨까요?',
-    ] },
-  { id: 'courage', label: '용기 주기', desc: '한 걸음 응원해요',
-    replies: [
-      '여기까지 이야기해 준 것만으로도 큰 용기를 낸 거예요.',
-      '오늘 할 수 있는 아주 작은 한 가지부터 해 봐요. 충분히 잘하고 있어요.',
-    ] },
+  // 각 방식의 실제 답변 지침은 server/chat.js 의 MODES 에 있어요
+  { id: 'listen', label: '경청', desc: '조용히 들어 줘요' },
+  { id: 'empathy', label: '공감', desc: '마음을 함께 느껴요' },
+  { id: 'think', label: '함께 생각하기', desc: '천천히 정리해 봐요' },
+  { id: 'courage', label: '용기 주기', desc: '한 걸음 응원해요' },
 ]
 
 export const BREATHING = [

@@ -2,7 +2,13 @@
 
 마음이 힘든 사람들이 편하게 이야기를 나누고 위로받을 수 있는 웹 앱의 1차 UI 초안입니다.
 
-> UI 초안 단계입니다. AI 연결, 로그인, 데이터 저장 기능은 아직 없으며 대화 답변은 정해진 예시 문구입니다.
+> 마음 대화는 OpenAI Responses API로 답합니다(서버에서만 호출). 로그인과 데이터 저장 기능은 없으며, 대화 내용은 저장하거나 로그에 남기지 않습니다. AI는 전문 상담을 대신하지 않습니다.
+
+## AI 연결 설정
+
+1. `.env.example`을 `.env.local`로 복사합니다. (`.env.local`은 git에 올라가지 않습니다)
+2. `OPENAI_API_KEY=` 뒤에 키를 적습니다. 모델은 `OPENAI_MODEL`로 바꿀 수 있습니다(기본 `gpt-6-luna`).
+3. 개발 서버를 다시 시작합니다.
 
 ## 화면
 
@@ -20,8 +26,9 @@ PC에서는 왼쪽 사이드바, 모바일(860px 이하)에서는 하단 메뉴�
 
 ```bash
 npm install
-npm run dev     # 개발 서버
+npm run dev     # 개발 서버 (화면 + /api/chat)
 npm run build   # dist/ 에 빌드
+npm start       # 빌드 결과 + /api/chat 을 함께 제공 (기본 포트 3000)
 ```
 
-React 19 + Vite 7, 추가 라이브러리 없이 구성했습니다.
+React 19 + Vite 7, 추가 라이브러리 없이 구성했습니다. 서버(`server/`)는 Node 내장 모듈만 사용합니다.
