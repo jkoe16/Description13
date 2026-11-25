@@ -12,7 +12,7 @@ const chatApi = {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  for (const k of ['OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_REASONING_EFFORT', 'OPENAI_BASE_URL', 'ACCESS_CODE']) {
+  for (const k of ['OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_REASONING_EFFORT', 'OPENAI_BASE_URL', 'FIREBASE_PROJECT_ID', 'VITE_FIREBASE_PROJECT_ID', 'ALLOWED_EMAILS']) {
     if (env[k] && !process.env[k]) process.env[k] = env[k]
   }
   return {

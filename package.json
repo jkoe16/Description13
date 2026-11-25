@@ -13,6 +13,7 @@
     "start": "node --env-file-if-exists=.env.local server/index.js"
   },
   "dependencies": {
+    "firebase": "^13.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

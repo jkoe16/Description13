@@ -21,6 +21,11 @@ export default function Nav({ page, go }) {
             </button>
           ))}
         </nav>
+        <button className={'side-item side-account' + (page === 'account' ? ' active' : '')}
+          aria-current={page === 'account' ? 'page' : undefined} onClick={() => go('account')}>
+          <Icon name="user" />
+          내 계정
+        </button>
         <a className="side-sos" href="tel:109">
           <Icon name="phone" size={18} />
           <span>

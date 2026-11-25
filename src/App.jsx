@@ -6,10 +6,11 @@ import Chat from './pages/Chat.jsx'
 import Journal from './pages/Journal.jsx'
 import Rest from './pages/Rest.jsx'
 import Help from './pages/Help.jsx'
+import Account from './pages/Account.jsx'
 
 function readPage() {
   const id = window.location.hash.replace(/^#\/?/, '')
-  return PAGES.some((p) => p.id === id) ? id : 'home'
+  return id === 'account' || PAGES.some((p) => p.id === id) ? id : 'home'
 }
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
     journal: <Journal />,
     rest: <Rest />,
     help: <Help />,
+    account: <Account go={go} />,
   }
 
   return (

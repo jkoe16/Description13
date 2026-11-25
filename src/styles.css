@@ -430,5 +430,31 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   .emotion-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-.code-form { display: flex; gap: 8px; width: 100%; }
-.code-form input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 10px; font: inherit; background: #fff; }
+
+/* ---------- 로그인 ---------- */
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.head-actions .pill:not(.sos) { background: var(--lavender-soft); color: var(--lavender-deep); }
+.side-account { margin-top: 8px; }
+.login-prompt { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; border-radius: var(--radius-sm); background: var(--lavender-soft); color: var(--lavender-deep); }
+.account-card { max-width: 440px; display: grid; gap: 16px; }
+.account-info { display: grid; gap: 12px; justify-items: start; }
+.account-info > p:first-child { color: var(--ink-soft); font-size: 0.85rem; }
+.account-info strong { font-size: 1.1rem; word-break: break-all; }
+.account-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.google { width: 100%; background: #fff; color: var(--ink); border: 1px solid var(--line); justify-content: center; }
+.btn.google:hover:not(:disabled) { background: var(--cream); }
+.g-mark { font-weight: 800; color: #4f7fae; }
+.divider { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 0.8rem; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--cream-deep); }
+.seg button { padding: 10px; border-radius: 10px; font-weight: 600; color: var(--ink-soft); }
+.seg button.active { background: #fff; color: var(--lavender-deep); box-shadow: var(--shadow); }
+.auth-form { display: grid; gap: 12px; }
+.auth-form label { display: grid; gap: 6px; font-size: 0.88rem; font-weight: 600; }
+.auth-form input { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-weight: 400; background: #fff; }
+.auth-form .btn.primary { width: 100%; justify-content: center; }
+.auth-form .link { justify-self: center; }
+.form-note { color: var(--ink-soft); font-size: 0.82rem; }
+.form-error { color: #a0603a; background: var(--peach-soft); padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; }
+.form-info { color: var(--blue-deep); background: var(--blue-soft); padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; }

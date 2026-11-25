@@ -1,8 +1,8 @@
 // 마음곁 대화 API: POST /api/chat
 // - OpenAI 키는 서버 환경변수(OPENAI_API_KEY)에서만 읽는다.
 // - 대화 내용은 저장하지 않고, 로그에도 남기지 않는다(상태 코드와 오류 종류만 기록).
-// - ACCESS_CODE 환경변수가 있으면 X-Access-Code 헤더가 일치하는 요청만 받는다(배포 시 키 사용 보호).
-import { createHash, timingSafeEqual } from 'node:crypto'
+// - Firebase로 로그인하고 ALLOWED_EMAILS에 있는 계정만 쓸 수 있다(키 사용 보호).
+import { checkUser, projectId } from './auth.js'
 
 const apiUrl = () => (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '') + '/responses'
 const MAX_MESSAGE_CHARS = 500 // 사용자가 한 번에 보낼 수 있는 글자 수
@@ -117,15 +117,12 @@ function extractText(data) {
     .trim()
 }
 
-const digest = (v) => createHash('sha256').update(String(v)).digest()
-function accessOk(req) {
-  const code = process.env.ACCESS_CODE
-  if (!code) return true
-  return timingSafeEqual(digest(req.headers['x-access-code'] || ''), digest(code))
-}
-
 const ERRORS = {
-  access: [401, '접속 암호를 입력해 주세요.'],
+  login: [401, '마음 대화는 로그인한 뒤에 쓸 수 있어요.'],
+  not_verified: [403, '이메일 인증을 마친 뒤에 쓸 수 있어요. 받은 메일함을 확인해 주세요.'],
+  not_allowed: [403, '이 계정은 아직 마음 대화를 쓸 수 있도록 허락되지 않았어요.'],
+  auth_setup: [503, '로그인 설정이 아직 끝나지 않았어요.'],
+  auth_check: [503, '로그인을 확인하지 못했어요. 잠시 뒤에 다시 시도해 주세요.'],
   no_key: [503, 'AI 연결이 아직 설정되지 않았어요.'],
   bad_request: [400, '메시지를 다시 확인해 주세요.'],
   too_long: [400, `메시지는 ${MAX_MESSAGE_CHARS}자까지 보낼 수 있어요.`],
@@ -153,7 +150,14 @@ export async function handleChat(req, res) {
   const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
   const ip = forwarded || req.socket.remoteAddress || 'unknown'
   if (rateLimited(ip)) return fail(res, 'rate_limited')
-  if (!accessOk(req)) return fail(res, 'access')
+  if (!projectId()) return fail(res, 'auth_setup')
+  try {
+    const who = await checkUser(req)
+    if (!who.ok) return fail(res, who.code)
+  } catch {
+    console.error('[chat] auth check failed')
+    return fail(res, 'auth_check')
+  }
 
   let payload
   try {
