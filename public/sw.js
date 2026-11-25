@@ -14,12 +14,17 @@ async function refreshShell() {
   if (!res.ok) return
   const html = await res.clone().text()
   const cache = await caches.open(CACHE)
+  const old = await cache.match(SHELL).then((r) => r?.text())
   const assets = assetsIn(html)
   await cache.addAll(assets)
   await cache.put(SHELL, res)
   const keep = new Set(assets.map((a) => new URL(a, self.registration.scope).href))
   for (const req of await cache.keys()) {
     if (new URL(req.url).pathname.includes('/assets/') && !keep.has(req.url)) await cache.delete(req)
+  }
+  // 화면이 바뀌었으면 열려 있는 앱에 "새 버전이 준비됐어요"를 알린다
+  if (old && old !== html) {
+    for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) c.postMessage({ type: 'update-ready' })
   }
 }
 

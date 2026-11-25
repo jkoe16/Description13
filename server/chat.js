@@ -260,3 +260,119 @@ export async function handleChat(req, res) {
     clearTimeout(timer)
   }
 }
+
+// ---------- 다정한 말: POST /api/comfort ----------
+// 홈 인사·오늘의 한 마디, 마음 기록 위로, 마음 대화 첫인사를 AI가 짧게 만든다.
+// 허락한 계정만 쓸 수 있고, 실패하면 화면은 미리 써 둔 문장을 그대로 쓴다.
+const EMOTION_LABELS = {
+  calm: '평온해요', happy: '기뻐요', tired: '지쳤어요', sad: '슬퍼요',
+  anxious: '불안해요', angry: '화가 나요', lonely: '외로워요', empty: '잘 모르겠어요',
+}
+const LEVEL_LABELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
+const obj = (props) => ({ type: 'object', properties: props, required: Object.keys(props), additionalProperties: false })
+const str = { type: 'string' }
+
+const COMFORT_TASKS = {
+  home: {
+    schema: obj({ greeting: str, word: str }),
+    prompt: (p) => {
+      const h = Number.isFinite(p.hoursAway) ? p.hoursAway : null
+      const away = h === null ? '앱에 처음 왔어요.' : h > 168 ? '일주일 넘게 오랜만에 왔어요.' : h > 6 ? `${Math.round(h)}시간 만에 다시 왔어요.` : '조금 전에도 왔다가 또 왔어요.'
+      return `지금은 ${p.hour}시예요. 사용자는 ${away}
+greeting: 앱 첫 화면 맨 위에 작게 보일 인사 한 문장 (25자 이내, 반가움이 느껴지게).
+word: '오늘의 한 마디'로 보여 줄 위로의 문장 한두 문장 (60자 이내). 뻔한 명언이나 따옴표 없이, 지친 사람에게 건네는 다정한 말로.`
+    },
+  },
+  journal: {
+    schema: obj({ reply: str, risk: { type: 'string', enum: ['none', 'concern', 'crisis'] } }),
+    prompt: (p) => `사용자가 마음 기록을 남겼어요.
+- 감정: ${EMOTION_LABELS[p.emotion]} (${LEVEL_LABELS[p.level - 1]})
+- 메모: ${p.note ? `"${p.note}"` : '(없음)'}
+reply: 기록을 남긴 사람에게 건네는 위로 2~3문장 (120자 이내). 메모가 있으면 그 내용을 구체적으로 짚어 주고, 감정을 인정해 줘요. 질문은 하지 않아요.
+risk: 메모나 감정에서 자해·자살·위험 신호가 보이면 "crisis", 아주 절망적이면 "concern", 아니면 "none". 애매하면 한 단계 높게.`,
+  },
+  hello: {
+    schema: obj({ reply: str }),
+    prompt: (p) => `사용자가 마음 대화를 열었어요. 지금은 ${p.hour}시예요.${p.emotion ? ` 방금 고른 마음은 '${EMOTION_LABELS[p.emotion]}'이에요.` : ''}
+reply: 대화를 여는 첫인사 1~2문장 (70자 이내). 시간과 마음에 어울리게, 편하게 이야기를 꺼낼 수 있도록 열린 질문 하나로 끝내요.`,
+  },
+}
+
+function comfortInput(kind, p) {
+  const hour = Number.isInteger(p?.hour) && p.hour >= 0 && p.hour < 24 ? p.hour : new Date().getHours()
+  if (kind === 'home') return { hour, hoursAway: typeof p.hoursAway === 'number' && p.hoursAway >= 0 ? Math.min(p.hoursAway, 24 * 365) : null }
+  if (kind === 'hello') return { hour, emotion: EMOTION_LABELS[p?.emotion] ? p.emotion : null }
+  if (kind === 'journal') {
+    if (!EMOTION_LABELS[p?.emotion] || !Number.isInteger(p?.level) || p.level < 1 || p.level > 5) return null
+    return { emotion: p.emotion, level: p.level, note: typeof p.note === 'string' ? p.note.trim().slice(0, 300) : '' }
+  }
+  return null
+}
+
+export async function handleComfort(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
+    return send(res, 405, { error: 'method', message: 'POST만 사용할 수 있어요.' })
+  }
+  const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
+  const ip = forwarded || req.socket.remoteAddress || 'unknown'
+  if (rateLimited(ip)) return fail(res, 'rate_limited')
+  if (!projectId()) return fail(res, 'auth_setup')
+  try {
+    const who = await checkUser(req)
+    if (!who.ok) return fail(res, who.code)
+  } catch {
+    return fail(res, 'auth_check')
+  }
+
+  let payload
+  try {
+    payload = JSON.parse(await readBody(req))
+  } catch (e) {
+    return fail(res, e.status === 413 ? 'too_large' : 'bad_request')
+  }
+  const task = COMFORT_TASKS[payload?.kind]
+  const input = task && comfortInput(payload.kind, payload)
+  if (!input) return fail(res, 'bad_request')
+  const key = process.env.OPENAI_API_KEY
+  if (!key) return fail(res, 'no_key')
+
+  // 메모에 위기 표현이 있으면 AI 판단과 상관없이 위기로 본다
+  const crisis = payload.kind === 'journal' && isCrisis(input.note)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15_000)
+  try {
+    const r = await fetch(apiUrl(), {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-6-luna',
+        instructions: [BASE_INSTRUCTIONS, crisis ? CRISIS_NOTE : '', '이번에는 대화가 아니라 앱 화면에 보여 줄 짧은 말을 만들어요. JSON으로만 답해요.'].filter(Boolean).join('\n\n'),
+        input: [{ role: 'user', content: task.prompt(input) }],
+        max_output_tokens: 300,
+        reasoning: { effort: process.env.OPENAI_REASONING_EFFORT || 'none' },
+        text: { verbosity: 'low', format: { type: 'json_schema', name: `comfort_${payload.kind}`, strict: true, schema: task.schema } },
+        store: false,
+      }),
+    })
+    if (!r.ok) {
+      console.error(`[comfort] OpenAI ${r.status}`)
+      return fail(res, r.status === 429 ? 'busy' : 'upstream', { crisis })
+    }
+    const out = JSON.parse(extractText(await r.json()))
+    const pick = (s, n) => (typeof s === 'string' ? s.trim().slice(0, n) : '')
+    if (payload.kind === 'home') {
+      const greeting = pick(out.greeting, 40), word = pick(out.word, 100)
+      return greeting && word ? send(res, 200, { greeting, word }) : fail(res, 'upstream')
+    }
+    const reply = pick(out.reply, 200)
+    if (!reply) return fail(res, 'upstream', { crisis })
+    return send(res, 200, { reply, crisis: crisis || out.risk === 'crisis' })
+  } catch (e) {
+    console.error(`[comfort] ${e.name === 'AbortError' ? 'timeout' : 'error'}`)
+    return fail(res, e.name === 'AbortError' ? 'timeout' : 'upstream', { crisis })
+  } finally {
+    clearTimeout(timer)
+  }
+}

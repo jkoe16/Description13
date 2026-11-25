@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { EMOTIONS } from '../data.js'
-import { dailyWord, welcomeLine } from '../comfort.js'
+import { awayHours, dailyWord, welcomeLine } from '../comfort.js'
+import { askComfort, cachedHome, saveHome } from '../comfortAI.js'
+import { useUser } from '../firebase.js'
 
 function greeting() {
   const h = new Date().getHours()
@@ -11,16 +14,31 @@ function greeting() {
 
 export default function Home({ mood, setMood, go }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
+  const user = useUser()
+  // 먼저 써 둔 문장을 보여 주고, 로그인했으면 AI가 만든 말로 바꾼다 (하루에 한 번)
+  const [words, setWords] = useState(() => ({ greeting: welcomeLine(), word: dailyWord(), ai: false }))
+  useEffect(() => {
+    if (!user) return
+    const hit = cachedHome(user.uid)
+    if (hit) return setWords({ greeting: hit.greeting, word: hit.word, ai: true })
+    let alive = true
+    askComfort({ kind: 'home', hoursAway: awayHours() }).then((r) => {
+      if (!alive || !r?.greeting) return
+      saveHome(user.uid, r)
+      setWords({ greeting: r.greeting, word: r.word, ai: true })
+    })
+    return () => { alive = false }
+  }, [user?.uid])
 
   return (
     <div className="page home">
       <section className="hero card">
-        <p className="eyebrow">{welcomeLine()}</p>
+        <p className="eyebrow" key={'g' + words.ai}>{words.greeting}</p>
         <h1>{greeting()}.</h1>
         <p className="lead">여기서는 잘하지 않아도 괜찮아요. 지금 마음이 어떤지 살짝 알려 주세요.</p>
         <div className="daily-word">
           <small>오늘의 한 마디</small>
-          <p>{dailyWord()}</p>
+          <p key={'w' + words.ai} className="ai-swap">{words.word}</p>
         </div>
       </section>
 

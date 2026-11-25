@@ -4,7 +4,7 @@ import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { extname, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { handleChat } from './chat.js'
+import { handleChat, handleComfort } from './chat.js'
 
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
 const PORT = Number(process.env.PORT) || 3000
@@ -17,6 +17,7 @@ const TYPES = {
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname)
   if (path === '/api/chat') return handleChat(req, res)
+  if (path === '/api/comfort') return handleComfort(req, res)
   // 앱을 열 때 잠든 서버를 미리 깨우는 용도. 아무 정보도 주고받지 않는다.
   if (path === '/api/health') {
     res.setHeader('Cache-Control', 'no-store')

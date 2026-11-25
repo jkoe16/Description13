@@ -44,6 +44,8 @@ export function dailyWord(date = new Date()) {
 // 다시 와 준 사람에게 건네는 인사 (마지막 방문 시각은 이 기기에만 저장)
 const VISIT_KEY = 'maeumgyeot-last-visit'
 let welcome = null
+let hoursAway = null
+export const awayHours = () => (welcomeLine(), hoursAway)
 export function welcomeLine() {
   if (welcome !== null) return welcome // 한 번 열 때 한 번만 정한다
   let last = 0
@@ -52,6 +54,7 @@ export function welcomeLine() {
     localStorage.setItem(VISIT_KEY, String(Date.now()))
   } catch { /* 저장 공간을 못 쓰면 인사만 기본으로 */ }
   const hours = (Date.now() - last) / 3600000
+  hoursAway = last ? hours : null
   if (!last) welcome = '처음 와 줬군요, 반가워요.'
   else if (hours > 24 * 7) welcome = '오랜만이에요. 다시 와 줘서 정말 반가워요.'
   else if (hours > 6) welcome = '다시 와 줘서 반가워요.'

@@ -5,6 +5,7 @@ import {
 import { EMOTIONS } from '../data.js'
 import { db, useUser } from '../firebase.js'
 import { journalReply } from '../comfort.js'
+import { askComfort } from '../comfortAI.js'
 
 const LEVELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
 const fmt = new Intl.DateTimeFormat('ko-KR', {
@@ -56,7 +57,13 @@ export default function Journal({ go }) {
     } else {
       setEntries((list) => [{ id: String(Date.now()), ...entry, at: new Date() }, ...list])
     }
-    setReply(journalReply(entry.emotion, entry.level))
+    const id = Date.now()
+    setReply({ id, ...journalReply(entry.emotion, entry.level) })
+    // 로그인했으면 메모까지 읽은 AI의 말로 바꾼다
+    askComfort({ kind: 'journal', ...entry }).then((r) => {
+      if (!r?.reply) return
+      setReply((cur) => (cur?.id === id ? { ...cur, text: r.reply, ai: true, crisis: r.crisis, offer: cur.offer || r.crisis } : cur))
+    })
     setEmotion(null)
     setLevel(3)
     setNote('')
@@ -113,7 +120,12 @@ export default function Journal({ go }) {
           </div>
           {reply && (
             <div className="journal-reply" role="status">
-              <p>{reply.text}</p>
+              <p key={reply.ai ? 'ai' : 'pre'} className="ai-swap">{reply.text}</p>
+              {reply.crisis && (
+                <p className="journal-sos">
+                  혼자 견디기 힘들 만큼 아프다면 지금 <a href="tel:109">109</a>에 전화해 주세요. 24시간 언제든 받아요.
+                </p>
+              )}
               {reply.offer && (
                 <div className="account-row">
                   <button className="btn soft small" onClick={() => go('cry')}>눈물 쉼터 가기</button>

@@ -6,6 +6,7 @@ import { CHAT_MODES, EMOTIONS } from '../data.js'
 import Icon from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
 import { chatHello } from '../comfort.js'
+import { askComfort } from '../comfortAI.js'
 
 let nextId = 1
 
@@ -60,6 +61,18 @@ export default function Chat({ mood, go }) {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, typing])
+
+  // 로그인했으면 첫인사를 AI가 시간과 마음에 맞춰 건넨다 (아직 아무 말도 안 했을 때만 바꿈)
+  const helloAsked = useRef(false)
+  useEffect(() => {
+    if (!user || helloAsked.current) return
+    helloAsked.current = true
+    askComfort({ kind: 'hello', emotion: mood || undefined }).then((r) => {
+      if (!r?.reply) return
+      setMessages((m) => (m.length === 1 && m[0].from === 'bot' && !chatId.current
+        ? [{ ...m[0], id: nextId++, text: r.reply }] : m))
+    })
+  }, [user, mood])
 
   // 화면을 떠나면 진행 중인 요청을 취소
   useEffect(() => () => request.current?.abort(), [])

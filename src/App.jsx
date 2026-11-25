@@ -17,6 +17,13 @@ function readPage() {
 export default function App() {
   const [page, setPage] = useState(readPage)
   const [mood, setMood] = useState(null)
+  const [update, setUpdate] = useState(false) // 새 버전이 준비됐는지
+
+  useEffect(() => {
+    const on = () => setUpdate(true)
+    window.addEventListener('maeumgyeot-update', on)
+    return () => window.removeEventListener('maeumgyeot-update', on)
+  }, [])
 
   useEffect(() => {
     const onHash = () => {
@@ -46,6 +53,13 @@ export default function App() {
   return (
     <div className="app">
       <Nav page={page} go={go} />
+      {update && (
+        <div className="update-bar" role="status">
+          <span>새 버전이 준비됐어요.</span>
+          <button className="btn primary small" onClick={() => window.location.reload()}>바꾸기</button>
+          <button className="link" onClick={() => setUpdate(false)}>나중에</button>
+        </div>
+      )}
       <main className="main" key={page}>
         {screens[page]}
       </main>
