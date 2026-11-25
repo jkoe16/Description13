@@ -47,6 +47,14 @@ export default function Home({ mood, setMood, go }) {
         </button>
       </section>
 
+      <button className="cry-entry card" onClick={() => go('cry')}>
+        <span className="cry-entry-dot" aria-hidden="true" />
+        <span>
+          <strong>울고 싶을 때</strong>
+          <small>불을 낮추고, 잔잔한 소리 곁에서 마음껏 울어도 괜찮아요</small>
+        </span>
+      </button>
+
       <section className="quick-grid">
         <button className="quick card tone-lavender" onClick={() => go('journal')}>
           <strong>마음 기록</strong>

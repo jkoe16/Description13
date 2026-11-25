@@ -7,10 +7,11 @@ import Journal from './pages/Journal.jsx'
 import Rest from './pages/Rest.jsx'
 import Help from './pages/Help.jsx'
 import Account from './pages/Account.jsx'
+import Cry from './pages/Cry.jsx'
 
 function readPage() {
   const id = window.location.hash.replace(/^#\/?/, '')
-  return id === 'account' || PAGES.some((p) => p.id === id) ? id : 'home'
+  return id === 'account' || id === 'cry' || PAGES.some((p) => p.id === id) ? id : 'home'
 }
 
 export default function App() {
@@ -38,6 +39,9 @@ export default function App() {
     help: <Help />,
     account: <Account go={go} />,
   }
+
+  // 울어도 되는 방은 메뉴 없이 화면 전체를 쓴다
+  if (page === 'cry') return <Cry go={go} />
 
   return (
     <div className="app">
