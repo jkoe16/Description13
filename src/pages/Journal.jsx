@@ -1,26 +1,74 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  addDoc, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp,
+} from 'firebase/firestore'
 import { EMOTIONS } from '../data.js'
+import { db, useUser } from '../firebase.js'
 
 const LEVELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
 const fmt = new Intl.DateTimeFormat('ko-KR', {
   month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit',
 })
 
-export default function Journal() {
+const SHOW = 50 // 화면에 보여 줄 최근 기록 수
+
+export default function Journal({ go }) {
+  const user = useUser()
+  const cloud = Boolean(user && db) // 로그인하면 계정에 저장, 아니면 이 화면에서만 잠시
   const [emotion, setEmotion] = useState(null)
   const [level, setLevel] = useState(3)
   const [note, setNote] = useState('')
   const [entries, setEntries] = useState([])
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const save = () => {
+  // 로그인한 계정의 기록을 실시간으로 불러온다 (users/{uid}/journal)
+  useEffect(() => {
+    setEntries([])
+    setError('')
+    if (!cloud) return
+    setLoading(true)
+    const q = query(collection(db, 'users', user.uid, 'journal'), orderBy('at', 'desc'), limit(SHOW))
+    return onSnapshot(q, (snap) => {
+      setEntries(snap.docs.map((d) => {
+        const v = d.data({ serverTimestamps: 'estimate' })
+        return { id: d.id, emotion: v.emotion, level: v.level, note: v.note, at: v.at?.toDate() || new Date() }
+      }).filter((en) => EMOTIONS.some((e) => e.id === en.emotion)))
+      setLoading(false)
+    }, () => {
+      setError('기록을 불러오지 못했어요. 잠시 뒤에 다시 열어 주세요.')
+      setLoading(false)
+    })
+  }, [cloud, user?.uid])
+
+  const save = async () => {
     if (!emotion) return
-    setEntries((list) => [{ id: Date.now(), emotion, level, note: note.trim(), at: new Date() }, ...list])
+    const entry = { emotion, level, note: note.trim() }
+    setError('')
+    if (cloud) {
+      try {
+        await addDoc(collection(db, 'users', user.uid, 'journal'), { ...entry, at: serverTimestamp() })
+      } catch {
+        return setError('기록을 저장하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.')
+      }
+    } else {
+      setEntries((list) => [{ id: String(Date.now()), ...entry, at: new Date() }, ...list])
+    }
     setEmotion(null)
     setLevel(3)
     setNote('')
     setSaved(true)
     setTimeout(() => setSaved(false), 2200)
+  }
+
+  const remove = async (id) => {
+    if (!cloud) return setEntries((l) => l.filter((x) => x.id !== id))
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'journal', id))
+    } catch {
+      setError('기록을 지우지 못했어요. 다시 시도해 주세요.')
+    }
   }
 
   return (
@@ -64,12 +112,22 @@ export default function Journal() {
             <button className="btn primary" onClick={save} disabled={!emotion}>기록하기</button>
           </div>
           {saved && <p className="toast" role="status">마음을 기록했어요. 잘했어요.</p>}
+          {error && <p className="form-error" role="alert">{error}</p>}
         </section>
 
         <section className="card">
-          <h2>이번에 남긴 기록</h2>
-          <p className="notice">UI 초안이라 저장 기능이 없어요. 기록은 이 화면에만 잠시 보이고, 새로고침하면 사라져요.</p>
-          {entries.length === 0 ? (
+          <h2>{cloud ? '내 기록' : '이번에 남긴 기록'}</h2>
+          {cloud ? (
+            <p className="notice">내 계정에 저장돼요. 나만 볼 수 있고, 다른 기기에서 로그인해도 보여요.</p>
+          ) : (
+            <div className="login-prompt">
+              <p>지금은 이 화면에만 잠시 보이고, 새로고침하면 사라져요. 로그인하면 기록이 계정에 저장돼요.</p>
+              {user === null && <button className="btn primary small" onClick={() => go('account')}>로그인하기</button>}
+            </div>
+          )}
+          {loading ? (
+            <p className="muted journal-loading">기록을 불러오고 있어요…</p>
+          ) : entries.length === 0 ? (
             <div className="empty">
               <span className="emoji">📖</span>
               <p>아직 남긴 기록이 없어요.<br />첫 마음을 기록해 보세요.</p>
@@ -86,7 +144,7 @@ export default function Journal() {
                       <small>{fmt.format(en.at)}</small>
                       {en.note && <p>{en.note}</p>}
                     </div>
-                    <button className="link" onClick={() => setEntries((l) => l.filter((x) => x.id !== en.id))}>
+                    <button className="link" onClick={() => remove(en.id)}>
                       지우기
                     </button>
                   </li>

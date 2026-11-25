@@ -1,7 +1,8 @@
-// Firebase 로그인 (Authentication만 사용). 설정값은 공개되어도 되는 웹 앱 설정이라 VITE_로 화면에 넣는다.
+// Firebase 로그인(Authentication)과 마음 기록 저장(Firestore). 설정값은 공개되어도 되는 웹 앱 설정이라 VITE_로 화면에 넣는다.
 import { useEffect, useState } from 'react'
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,7 +12,9 @@ const config = {
 }
 
 export const firebaseReady = Boolean(config.apiKey && config.authDomain && config.projectId)
-export const auth = firebaseReady ? getAuth(initializeApp(config)) : null
+const app = firebaseReady ? initializeApp(config) : null
+export const auth = app ? getAuth(app) : null
+export const db = app ? getFirestore(app) : null
 if (auth) auth.languageCode = 'ko'
 
 // 현재 로그인한 사용자. undefined = 아직 확인 중, null = 로그인 안 함

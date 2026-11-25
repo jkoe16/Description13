@@ -33,7 +33,7 @@ export default function App() {
   const screens = {
     home: <Home mood={mood} setMood={setMood} go={go} />,
     chat: <Chat mood={mood} go={go} />,
-    journal: <Journal />,
+    journal: <Journal go={go} />,
     rest: <Rest />,
     help: <Help />,
     account: <Account go={go} />,

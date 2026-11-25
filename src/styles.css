@@ -458,3 +458,5 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .form-note { color: var(--ink-soft); font-size: 0.82rem; }
 .form-error { color: #a0603a; background: var(--peach-soft); padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; }
 .form-info { color: var(--blue-deep); background: var(--blue-soft); padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; }
+.journal-loading { margin-top: 16px; }
+.card > .login-prompt { margin-top: 12px; font-size: 0.9rem; }

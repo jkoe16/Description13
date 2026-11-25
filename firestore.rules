@@ -1,0 +1,15 @@
+rules_version = '2';
+// 마음 기록: 로그인한 본인만 자기 기록을 읽고, 쓰고, 지울 수 있다. (기록은 고치지 않음)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/journal/{entryId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['emotion', 'level', 'note', 'at'])
+        && request.resource.data.emotion is string && request.resource.data.emotion.size() <= 20
+        && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 5
+        && request.resource.data.note is string && request.resource.data.note.size() <= 300
+        && request.resource.data.at == request.time;
+    }
+  }
+}
