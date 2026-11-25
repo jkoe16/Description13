@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { barColor } from '../theme.js'
 
 // 눈물 쉼터: 어두운 화면, 잔잔한 소리, 곁에 있어 주는 말. 아무것도 저장하지 않는다.
 
@@ -155,9 +156,8 @@ export default function Cry({ go }) {
   // 쉼터에 있는 동안 휴대폰 상단 막대도 어둡게
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
-    const before = meta?.content
     meta?.setAttribute('content', '#17152a')
-    return () => before && meta.setAttribute('content', before)
+    return () => meta?.setAttribute('content', barColor())
   }, [])
 
   useEffect(() => {

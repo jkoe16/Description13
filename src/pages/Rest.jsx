@@ -27,6 +27,7 @@ export default function Rest() {
   const [patternId, setPatternId] = useState('box')
   const [status, setStatus] = useState('idle') // idle | running | paused
   const [state, setState] = useState(START)
+  const [thanks, setThanks] = useState(false) // 호흡을 마치고 나면 건네는 말
   const pattern = BREATHING.find((b) => b.id === patternId)
   const phases = pattern.phases
 
@@ -44,6 +45,7 @@ export default function Rest() {
   }, [status, phases])
 
   const start = () => {
+    setThanks(false)
     setState({ phase: 0, ms: phases[0].sec * 1000, cycles: 0 })
     setStatus('running')
   }
@@ -51,8 +53,14 @@ export default function Rest() {
     setStatus('idle')
     setState(START)
   }
+  const finish = () => {
+    const did = state.cycles > 0 || state.phase > 0
+    end()
+    setThanks(did)
+  }
   const choose = (id) => {
     end()
+    setThanks(false)
     setPatternId(id)
   }
 
@@ -95,7 +103,9 @@ export default function Rest() {
           </div>
 
           <p className="breath-guide" aria-live="polite">
-            {status === 'idle' && `${pattern.name} · ${pattern.summary}`}
+            {status === 'idle' && (thanks
+              ? <span className="rest-thanks">함께 숨 쉬어 줘서 고마워요. 조금이라도 편안해졌길 바라요.</span>
+              : `${pattern.name} · ${pattern.summary}`)}
             {status === 'running' && guideFor(phases, state.phase)}
             {status === 'paused' && '잠시 멈췄어요. 준비되면 이어서 해요.'}
           </p>
@@ -109,7 +119,7 @@ export default function Rest() {
             {status === 'idle' && <button className="btn primary" onClick={start}>시작하기</button>}
             {status === 'running' && <button className="btn soft" onClick={() => setStatus('paused')}>일시정지</button>}
             {status === 'paused' && <button className="btn primary" onClick={() => setStatus('running')}>다시 시작</button>}
-            {active && <button className="btn ghost" onClick={end}>종료하기</button>}
+            {active && <button className="btn ghost" onClick={finish}>종료하기</button>}
           </div>
         </section>
 

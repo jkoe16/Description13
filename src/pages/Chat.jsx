@@ -5,6 +5,7 @@ import {
 import { CHAT_MODES, EMOTIONS } from '../data.js'
 import Icon from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
+import { chatHello } from '../comfort.js'
 
 let nextId = 1
 
@@ -20,7 +21,7 @@ const greeting = (picked) => ({
   id: nextId++, from: 'bot',
   text: picked
     ? `'${picked.label}' 마음으로 와 주었군요. 어떤 일이 있었는지 편하게 들려주세요.`
-    : '안녕하세요, 마음곁이에요. 오늘 어떤 이야기를 나누고 싶나요?',
+    : chatHello(),
 })
 
 const SOS = [

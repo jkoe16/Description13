@@ -1,4 +1,5 @@
 import { EMOTIONS } from '../data.js'
+import { dailyWord, welcomeLine } from '../comfort.js'
 
 function greeting() {
   const h = new Date().getHours()
@@ -14,9 +15,13 @@ export default function Home({ mood, setMood, go }) {
   return (
     <div className="page home">
       <section className="hero card">
-        <p className="eyebrow">마음곁</p>
+        <p className="eyebrow">{welcomeLine()}</p>
         <h1>{greeting()}.</h1>
         <p className="lead">여기서는 잘하지 않아도 괜찮아요. 지금 마음이 어떤지 살짝 알려 주세요.</p>
+        <div className="daily-word">
+          <small>오늘의 한 마디</small>
+          <p>{dailyWord()}</p>
+        </div>
       </section>
 
       <section className="card">

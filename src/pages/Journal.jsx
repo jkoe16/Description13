@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore'
 import { EMOTIONS } from '../data.js'
 import { db, useUser } from '../firebase.js'
+import { journalReply } from '../comfort.js'
 
 const LEVELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
 const fmt = new Intl.DateTimeFormat('ko-KR', {
@@ -19,7 +20,7 @@ export default function Journal({ go }) {
   const [level, setLevel] = useState(3)
   const [note, setNote] = useState('')
   const [entries, setEntries] = useState([])
-  const [saved, setSaved] = useState(false)
+  const [reply, setReply] = useState(null) // 기록한 뒤 건네는 말 (다음 감정을 고를 때까지 남아 있음)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -55,11 +56,10 @@ export default function Journal({ go }) {
     } else {
       setEntries((list) => [{ id: String(Date.now()), ...entry, at: new Date() }, ...list])
     }
+    setReply(journalReply(entry.emotion, entry.level))
     setEmotion(null)
     setLevel(3)
     setNote('')
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2200)
   }
 
   const remove = async (id) => {
@@ -86,7 +86,7 @@ export default function Journal({ go }) {
           <div className="emotion-grid compact">
             {EMOTIONS.map((e) => (
               <button key={e.id} className={`emotion tone-${e.tone}` + (emotion === e.id ? ' selected' : '')}
-                aria-pressed={emotion === e.id} onClick={() => setEmotion(e.id)}>
+                aria-pressed={emotion === e.id} onClick={() => { setEmotion(e.id); setReply(null) }}>
                 <span className="emoji">{e.emoji}</span>
                 {e.label}
               </button>
@@ -111,7 +111,17 @@ export default function Journal({ go }) {
             <small className="muted">{note.length}/300</small>
             <button className="btn primary" onClick={save} disabled={!emotion}>기록하기</button>
           </div>
-          {saved && <p className="toast" role="status">마음을 기록했어요. 잘했어요.</p>}
+          {reply && (
+            <div className="journal-reply" role="status">
+              <p>{reply.text}</p>
+              {reply.offer && (
+                <div className="account-row">
+                  <button className="btn soft small" onClick={() => go('cry')}>눈물 쉼터 가기</button>
+                  <button className="btn soft small" onClick={() => go('chat')}>마음 대화 하기</button>
+                </div>
+              )}
+            </div>
+          )}
           {error && <p className="form-error" role="alert">{error}</p>}
         </section>
 
