@@ -12,7 +12,7 @@ export default function Home({ mood, setMood, go }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
 
   return (
-    <div className="page">
+    <div className="page home">
       <section className="hero card">
         <p className="eyebrow">마음곁</p>
         <h1>{greeting()}.</h1>

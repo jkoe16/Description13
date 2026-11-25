@@ -4,6 +4,13 @@ import Icon from '../components/Icon.jsx'
 
 let nextId = 1
 
+const STARTERS = [
+  '오늘 있었던 일을 이야기하고 싶어요.',
+  '요즘 마음이 복잡해요.',
+  '누군가에게 위로받고 싶어요.',
+  '그냥 편하게 이야기하고 싶어요.',
+]
+
 export default function Chat({ mood, go }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
   const [mode, setMode] = useState('listen')
@@ -18,6 +25,9 @@ export default function Chat({ mood, go }) {
   const count = useRef(0)
   const endRef = useRef(null)
   const timer = useRef(null)
+  const inputRef = useRef(null)
+  const busy = useRef(false)
+  const started = messages.some((m) => m.from === 'me')
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -25,9 +35,18 @@ export default function Chat({ mood, go }) {
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  const send = () => {
-    const value = text.trim()
-    if (!value || typing) return
+  // 줄바꿈에 맞춰 입력창 높이 조절
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [text])
+
+  const send = (raw = text) => {
+    const value = raw.trim()
+    if (!value || busy.current) return
+    busy.current = true
     setMessages((m) => [...m, { id: nextId++, from: 'me', text: value }])
     setText('')
     setTyping(true)
@@ -36,6 +55,8 @@ export default function Chat({ mood, go }) {
     timer.current = setTimeout(() => {
       setMessages((m) => [...m, { id: nextId++, from: 'bot', text: reply, sample: true }])
       setTyping(false)
+      busy.current = false
+      inputRef.current?.focus()
     }, 900)
   }
 
@@ -78,6 +99,16 @@ export default function Chat({ mood, go }) {
               </div>
             </div>
           ))}
+          {!started && (
+            <div className="starters">
+              <p>이렇게 시작해 볼 수도 있어요</p>
+              <div className="starter-list">
+                {STARTERS.map((s) => (
+                  <button key={s} className="starter" onClick={() => send(s)}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
           {typing && (
             <div className="bubble-row bot">
               <span className="avatar">곁</span>
@@ -88,9 +119,9 @@ export default function Chat({ mood, go }) {
         </div>
 
         <div className="composer">
-          <textarea rows={1} value={text} placeholder="마음속 이야기를 적어 주세요"
+          <textarea ref={inputRef} rows={1} value={text} placeholder="마음속 이야기를 적어 주세요"
             onChange={(e) => setText(e.target.value)} onKeyDown={onKey} aria-label="메시지 입력" />
-          <button className="send" onClick={send} disabled={!text.trim() || typing} aria-label="보내기">
+          <button className="send" onClick={() => send()} disabled={!text.trim() || typing} aria-label="보내기">
             <Icon name="send" size={20} />
           </button>
         </div>

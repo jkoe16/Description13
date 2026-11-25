@@ -127,9 +127,9 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .pill.sos { background: var(--peach-soft); color: #a0603a; }
 .link { color: var(--ink-soft); font-size: 0.82rem; text-decoration: underline; }
 
-.tone-lavender { --tone: var(--lavender-soft); --tone-deep: var(--lavender-deep); }
-.tone-blue { --tone: var(--blue-soft); --tone-deep: var(--blue-deep); }
-.tone-cream { --tone: var(--peach-soft); --tone-deep: #a0603a; }
+.tone-lavender { --tone: var(--lavender-soft); --tone-deep: var(--lavender-deep); --tone-ring: rgba(111, 95, 176, 0.16); }
+.tone-blue { --tone: var(--blue-soft); --tone-deep: var(--blue-deep); --tone-ring: rgba(79, 127, 174, 0.16); }
+.tone-cream { --tone: var(--peach-soft); --tone-deep: #a0603a; --tone-ring: rgba(160, 96, 58, 0.14); }
 
 /* ---------- 홈 ---------- */
 .hero {
@@ -180,7 +180,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 
 .chat { display: flex; flex-direction: column; padding: 0; overflow: hidden; height: min(620px, 64vh); }
 .chat .notice { margin: 14px 18px 0; }
-.messages { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.messages { flex: 1; overflow-y: auto; padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
 .bubble-row { display: flex; gap: 10px; align-items: flex-end; animation: fadeUp 0.3s ease; }
 .bubble-row.me { justify-content: flex-end; }
 .avatar {
@@ -188,16 +188,29 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   background: linear-gradient(140deg, var(--lavender), var(--blue)); color: #fff; font-size: 0.85rem; font-weight: 700;
 }
 .bubble {
-  max-width: min(78%, 520px); padding: 12px 16px; border-radius: 20px; line-height: 1.6; white-space: pre-wrap;
-  background: #fff; box-shadow: 0 2px 8px rgba(92, 76, 150, 0.08); border-bottom-left-radius: 6px;
+  max-width: min(78%, 520px); padding: 13px 17px; border-radius: 20px;
+  font-size: 0.97rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: #fff; border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(92, 76, 150, 0.06); border-bottom-left-radius: 6px;
 }
 .me .bubble {
-  background: linear-gradient(135deg, var(--lavender-soft), var(--blue-soft));
+  background: var(--lavender-soft); border-color: transparent; box-shadow: none;
   border-bottom-left-radius: 20px; border-bottom-right-radius: 6px;
 }
 .sample-tag {
-  display: block; margin-top: 6px; font-size: 0.72rem; color: var(--ink-soft);
+  display: block; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line);
+  font-size: 0.72rem; color: var(--ink-soft);
 }
+.starters { margin: 4px 0 0 44px; animation: fadeUp 0.3s ease; }
+.starters p { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 10px; }
+.starter-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.starter {
+  padding: 10px 16px; border-radius: 999px; font-size: 0.9rem; text-align: left;
+  background: #fff; border: 1px solid rgba(111, 95, 176, 0.28); color: var(--lavender-deep);
+  transition: background 0.2s, border-color 0.2s;
+}
+.starter:hover { background: var(--lavender-soft); border-color: var(--lavender); }
+@media (max-width: 860px) { .starters { margin-left: 0; } }
 .typing { display: flex; gap: 5px; padding: 16px 18px; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--lavender); animation: blink 1.2s infinite; }
 .typing i:nth-child(2) { animation-delay: 0.15s; }
@@ -253,18 +266,29 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 /* ---------- 마음 휴식 ---------- */
 .breath-card { display: grid; justify-items: center; padding-block: 40px; }
 .breath-stage { position: relative; width: min(300px, 70vw); aspect-ratio: 1; display: grid; place-items: center; margin-bottom: 18px; }
-.breath-halo, .breath-circle {
-  position: absolute; inset: 0; border-radius: 50%;
-  transition-property: transform; transition-timing-function: ease-in-out;
-}
-.breath-halo { background: radial-gradient(circle, rgba(185, 168, 230, 0.35), transparent 70%); }
+.breath-scale { position: absolute; inset: 0; transform: scale(var(--s1)); }
+.breath-scale.animate { animation: breathe var(--dur) ease-in-out both; }
+.breath-scale.animate.paused { animation-play-state: paused; }
+@keyframes breathe { from { transform: scale(var(--s0)); } to { transform: scale(var(--s1)); } }
+.breath-halo, .breath-circle { position: absolute; border-radius: 50%; }
+.breath-halo { inset: -6%; background: radial-gradient(circle, rgba(185, 168, 230, 0.35), transparent 70%); }
 .breath-circle {
-  display: grid; place-content: center; text-align: center; gap: 4px; color: #fff;
+  inset: 0;
   background: radial-gradient(circle at 30% 30%, #cbbcf0, var(--lavender) 55%, #93b9e4);
   box-shadow: 0 20px 50px -18px rgba(111, 95, 176, 0.6);
 }
-.breath-circle strong { font-size: 1.25rem; line-height: 1.4; }
-.breath-circle .count { font-size: 2.6rem; font-weight: 300; }
+.breath-label {
+  position: relative; display: grid; justify-items: center; text-align: center; color: #fff;
+  text-shadow: 0 1px 6px rgba(80, 64, 140, 0.35);
+}
+.breath-label strong { font-size: 1.2rem; line-height: 1.4; }
+.breath-label .count { font-size: 2.6rem; font-weight: 300; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.breath-label small { font-size: 0.75rem; opacity: 0.9; }
+.breath-guide { text-align: center; color: var(--ink); line-height: 1.6; min-height: 1.6em; max-width: 30em; }
+.breath-progress { margin-top: 6px; font-size: 0.85rem; }
+.breath-controls { gap: 10px; }
+.btn.ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+.btn.ghost:hover { background: #fff; color: var(--ink); }
 .pattern-list { display: grid; gap: 10px; }
 .pattern {
   text-align: left; padding: 16px; border-radius: var(--radius-sm); display: grid; gap: 4px;
@@ -294,6 +318,53 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .agency-list small { display: block; color: var(--ink-soft); font-size: 0.84rem; margin-top: 2px; }
 .agency-number { font-weight: 700; color: var(--lavender-deep); font-size: 1.05rem; }
 .agency-actions { display: flex; gap: 6px; }
+
+/* ---------- PC 홈·사이드바 다듬기 (모바일 영향 없음) ---------- */
+@media (min-width: 861px) {
+  /* 1. 환영 문구 설명 영역 */
+  .home .lead { max-width: 40em; text-wrap: pretty; }
+
+  /* 2. 감정 카드 선택 상태 */
+  .home .emotion { position: relative; }
+  .home .emotion.selected {
+    background: var(--tone);
+    border-color: var(--tone-deep);
+    box-shadow: 0 0 0 4px var(--tone-ring), var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+  .home .emotion.selected::after {
+    content: '✓';
+    position: absolute; top: 8px; right: 10px;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 0.7rem; font-weight: 700; color: #fff;
+    background: var(--tone-deep);
+  }
+
+  /* 3. 대화 시작 버튼 */
+  .home .btn.wide { transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
+  .home .btn.wide:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+    box-shadow: 0 14px 28px -10px rgba(111, 95, 176, 0.75);
+  }
+  .home .btn.wide:active {
+    transform: translateY(0) scale(0.985);
+    filter: brightness(0.97);
+    box-shadow: 0 6px 14px -8px rgba(111, 95, 176, 0.7);
+  }
+
+  /* 4. 왼쪽 메뉴 아이콘 · 활성 상태 통일 */
+  .side-item svg, .side-sos svg {
+    flex: none; width: 34px; height: 34px; padding: 7px;
+    border-radius: 11px; transition: background 0.2s, color 0.2s;
+  }
+  .side-item { padding: 7px 10px; }
+  .side-item:hover svg { background: #fff; }
+  .side-item.active svg { background: var(--lavender-soft); color: var(--lavender-deep); }
+  .side-sos { padding: 10px; }
+  .side-sos svg { background: #fff; color: #a0603a; }
+}
 
 /* ---------- 애니메이션 ---------- */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
