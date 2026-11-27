@@ -66,7 +66,10 @@ Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`, `users/{
 npm install
 npm run dev                  # 개발 서버 (화면 + API)
 npm run build && npm start   # 배포와 같은 방식 (포트 3000)
+npm test                     # 시험 (진짜 OpenAI 대신 가짜 AI로 서버와 위로 문장을 확인)
 ```
+
+GitHub에 올리거나 PR을 열면 `.github/workflows/ci.yml`이 자동으로 빌드와 시험을 돌려요. 고친 뒤 시험이 실패하면 PR에 빨간 표시가 떠요.
 
 ## 운영 메모
 
