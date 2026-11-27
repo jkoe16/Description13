@@ -5,6 +5,28 @@ import {
 } from 'firebase/auth'
 import { auth, authMessage, firebaseReady, useUser } from '../firebase.js'
 import MyData, { MemoryList, PrivacyNote } from '../components/MyData.jsx'
+import { THEME_CHOICES, getThemeChoice, setThemeChoice } from '../theme.js'
+
+// 화면 밝기: 자동 / 항상 밝게 / 항상 어둡게 (로그인하지 않아도 쓸 수 있음)
+function ThemePicker() {
+  const [choice, setChoice] = useState(getThemeChoice)
+  const pick = (id) => {
+    setChoice(id)
+    setThemeChoice(id)
+  }
+  return (
+    <section className="card theme-card">
+      <h2>화면 밝기</h2>
+      <div className="seg" role="radiogroup" aria-label="화면 밝기">
+        {THEME_CHOICES.map((c) => (
+          <button key={c.id} role="radio" aria-checked={choice === c.id} className={choice === c.id ? 'active' : ''}
+            onClick={() => pick(c.id)}>{c.label}</button>
+        ))}
+      </div>
+      <p className="muted">{THEME_CHOICES.find((c) => c.id === choice).desc}</p>
+    </section>
+  )
+}
 
 export default function Account({ go }) {
   const user = useUser()
@@ -143,6 +165,7 @@ export default function Account({ go }) {
         {info && <p className="form-info" role="status">{info}</p>}
       </section>
 
+      <ThemePicker />
       {firebaseReady && user && <MemoryList refresh={dataVersion} />}
       {firebaseReady && user && <MyData onChange={() => setDataVersion((v) => v + 1)} />}
       <PrivacyNote />
