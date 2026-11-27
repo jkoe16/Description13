@@ -49,7 +49,7 @@ export default function Home({ mood, setMood, go }) {
         <h1>{greeting()}.</h1>
         <p className="lead">여기서는 잘하지 않아도 괜찮아요. 지금 마음이 어떤지 살짝 알려 주세요.</p>
         <button className="daily-word" onClick={showNext} title="누르면 다음 말을 보여 줘요">
-          <small>오늘의 한 마디</small>
+          <small>오늘의 한 마디 <span className="word-hint">· 누르면 다음 말</span></small>
           <p key={'w' + words.ai + turn} className="ai-swap">{words.word}</p>
         </button>
       </section>
