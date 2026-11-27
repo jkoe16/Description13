@@ -4,7 +4,7 @@ import {
   sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut,
 } from 'firebase/auth'
 import { auth, authMessage, firebaseReady, useUser } from '../firebase.js'
-import MyData, { PrivacyNote } from '../components/MyData.jsx'
+import MyData, { MemoryList, PrivacyNote } from '../components/MyData.jsx'
 
 export default function Account({ go }) {
   const user = useUser()
@@ -14,6 +14,7 @@ export default function Account({ go }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
+  const [dataVersion, setDataVersion] = useState(0) // 내 데이터를 지우면 AI 기억 목록을 다시 불러온다
 
   const run = async (fn) => {
     setBusy(true)
@@ -142,7 +143,8 @@ export default function Account({ go }) {
         {info && <p className="form-info" role="status">{info}</p>}
       </section>
 
-      {firebaseReady && user && <MyData />}
+      {firebaseReady && user && <MemoryList refresh={dataVersion} />}
+      {firebaseReady && user && <MyData onChange={() => setDataVersion((v) => v + 1)} />}
       <PrivacyNote />
     </div>
   )

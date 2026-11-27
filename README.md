@@ -17,7 +17,7 @@
 | 마음 기록 | `#/journal` | 감정·크기·메모. 로그인 시 계정에 저장, 감정별 위로(로그인 시 AI가 메모를 읽고 위로) |
 | 마음 휴식 | `#/rest` | 호흡 안내 |
 | 도움받기 | `#/help` | 109·112·119, 상담기관 |
-| 내 계정 | `#/account` | Google·이메일 로그인, 내 데이터 전부 지우기·계정 삭제, 개인정보 안내 |
+| 내 계정 | `#/account` | Google·이메일 로그인, AI가 기억하는 것(보기·지우기), 내 데이터 전부 지우기·계정 삭제, 개인정보 안내 |
 | 눈물 쉼터 | `#/cry` | 메뉴 없는 어두운 전체 화면, 빗소리·파도(Web Audio), 곁에 있는 말, 진정 후 체크인 |
 
 공통: 밤 9시~아침 6시 또는 휴대폰 다크 모드면 밤 모드, 부드러운 화면 전환, 새 버전이 나오면 "새 버전이 준비됐어요 [바꾸기]" 안내.
@@ -35,6 +35,7 @@ src/
   theme.js         밤 모드 (data-theme="night")
   comfort.js       미리 써 둔 다정한 말 (AI가 실패하면 이걸 씀)
   comfortAI.js     /api/comfort 호출, 홈 AI 문장 하루 캐시
+  memory.js        AI가 나를 기억하기: 대화 요약 저장, 지난 요약·최근 감정 불러오기
   pages/, components/
 public/
   sw.js            서비스 워커: 화면을 저장해 두고 바로 열기, 뒤에서 갱신, /api는 캐시 안 함
@@ -43,7 +44,7 @@ firestore.rules    Firestore 보안 규칙 (Firebase 콘솔에 게시한 것과 
 render.yaml        Render 설정
 ```
 
-Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`. 본인만 읽기·쓰기·삭제할 수 있어요.
+Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`, `users/{uid}/memory/{대화 id}`(AI가 만든 대화 요약). 본인만 읽기·쓰기·삭제할 수 있어요.
 규칙을 바꾸면 `firestore.rules`를 고친 뒤 [Firebase 콘솔 규칙 화면](https://console.firebase.google.com/project/maeumgyeot-92e27/firestore/rules)에 붙여 넣고 게시해야 해요.
 
 ## 환경변수
@@ -81,7 +82,7 @@ npm run build && npm start   # 배포와 같은 방식 (포트 3000)
 **다음 할 일 후보** (추천 순서, 자세한 내용과 고치는 방법은 [docs/아쉬운-점.md](docs/아쉬운-점.md))
 1. ~~휴대폰에서 확인~~ (완료, 문제 없음)
 2. ~~OpenAI 사용 한도 걸기~~ (자동 충전 꺼 둠, 2026-11-27)
-3. AI가 나를 기억하기 (지금은 대화에서 최근 10개 메시지만 보고, 지난 대화·기록을 모름)
+3. ~~AI가 나를 기억하기~~ (대화 요약 + 최근 기록 감정, 2026-11-27)
 4. 밤 모드 직접 켜고 끄기
 5. 마음 기록 돌아보기(감정 그래프 등), 기록 고치기
 6. `src/pages/Chat.jsx` 정리 (기능이 늘어 파일이 커짐)

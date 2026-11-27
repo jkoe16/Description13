@@ -1,5 +1,5 @@
 rules_version = '2';
-// 마음 기록과 마음 대화: 로그인한 본인만 자기 것을 읽고, 쓰고, 지울 수 있다.
+// 마음 기록, 마음 대화, AI 기억: 로그인한 본인만 자기 것을 읽고, 쓰고, 지울 수 있다.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/journal/{entryId} {
@@ -19,6 +19,14 @@ service cloud.firestore {
         && request.resource.data.mode is string && request.resource.data.mode.size() <= 20
         && request.resource.data.messages is list && request.resource.data.messages.size() <= 200
         && request.resource.data.updatedAt == request.time;
+    }
+    // AI가 나를 기억하기: 대화마다 AI가 만든 짧은 요약 (문서 id = 대화 id)
+    match /users/{uid}/memory/{chatId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['summary', 'at'])
+        && request.resource.data.summary is string && request.resource.data.summary.size() <= 300
+        && request.resource.data.at == request.time;
     }
   }
 }

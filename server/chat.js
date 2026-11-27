@@ -174,6 +174,34 @@ function fail(res, code, extra = {}) {
   send(res, status, { error: code, message, ...extra })
 }
 
+// ---------- AI가 나를 기억하기 ----------
+// 화면이 내 계정에서 읽은 지난 대화 요약과 최근 마음 기록 감정을 보내 주면, AI에게 참고로 알려 준다.
+// 서버는 이것도 저장하지 않는다. 형식이 이상한 항목은 조용히 버린다.
+const MAX_SUMMARIES = 5
+const MAX_MOODS = 7
+const ago = (d) => (d === 0 ? '오늘' : d === 1 ? '어제' : `${d}일 전`)
+const dayCount = (d) => (Number.isInteger(d) && d >= 0 && d <= 3650 ? d : null)
+
+export function memoryNote(memory) {
+  if (!memory || typeof memory !== 'object') return ''
+  const summaries = (Array.isArray(memory.summaries) ? memory.summaries : [])
+    .filter((m) => m && typeof m.text === 'string' && m.text.trim() && dayCount(m.daysAgo) !== null)
+    .slice(0, MAX_SUMMARIES)
+    .map((m) => `- ${ago(m.daysAgo)} 대화: ${m.text.trim().slice(0, 300)}`)
+  const moods = (Array.isArray(memory.moods) ? memory.moods : [])
+    .filter((m) => m && EMOTION_LABELS[m.emotion] && Number.isInteger(m.level) && m.level >= 1 && m.level <= 5 && dayCount(m.daysAgo) !== null)
+    .slice(0, MAX_MOODS)
+    .map((m) => `${ago(m.daysAgo)} ${EMOTION_LABELS[m.emotion]}(${LEVEL_LABELS[m.level - 1]})`)
+  if (!summaries.length && !moods.length) return ''
+  return [
+    '지난 이야기: 사용자가 이 앱에서 예전에 나눈 대화의 요약과 최근 마음 기록이에요.',
+    '- 참고만 하고, 자연스러울 때만 가볍게 꺼내요. 매번 언급하거나 목록처럼 읊지 않아요. 지금 하는 이야기가 가장 우선이에요.',
+    '- 기억이 틀렸다고 하면 바로 사과하고 지금 말해 준 것을 따라요.',
+    summaries.length ? '지난 대화 요약:\n' + summaries.join('\n') : '',
+    moods.length ? '최근 마음 기록: ' + moods.join(', ') : '',
+  ].filter(Boolean).join('\n')
+}
+
 export async function handleChat(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -214,7 +242,7 @@ export async function handleChat(req, res) {
   const key = process.env.OPENAI_API_KEY
   if (!key) return fail(res, 'no_key', { crisis })
 
-  const instructions = [BASE_INSTRUCTIONS, MODES[mode], crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
+  const instructions = [BASE_INSTRUCTIONS, memoryNote(payload.memory), MODES[mode], crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
@@ -269,6 +297,7 @@ const EMOTION_LABELS = {
   anxious: '불안해요', angry: '화가 나요', lonely: '외로워요', empty: '잘 모르겠어요',
 }
 const LEVEL_LABELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
+const SUMMARY_MESSAGES = 16 // 요약할 때 보는 최근 메시지 수 (요청 크기 제한 안에 들도록)
 const obj = (props) => ({ type: 'object', properties: props, required: Object.keys(props), additionalProperties: false })
 const str = { type: 'string' }
 
@@ -294,14 +323,32 @@ risk: 메모나 감정에서 자해·자살·위험 신호가 보이면 "crisis"
   hello: {
     schema: obj({ reply: str }),
     prompt: (p) => `사용자가 마음 대화를 열었어요. 지금은 ${p.hour}시예요.${p.emotion ? ` 방금 고른 마음은 '${EMOTION_LABELS[p.emotion]}'이에요.` : ''}
-reply: 대화를 여는 첫인사 1~2문장 (70자 이내). 시간과 마음에 어울리게, 편하게 이야기를 꺼낼 수 있도록 열린 질문 하나로 끝내요.`,
+${p.memory ? p.memory + '\n지난 이야기가 있으면, 자연스러울 때 그중 하나를 가볍게 이어서 물어봐도 돼요(부담 주지 않게). 없으면 그냥 인사해요.\n' : ''}reply: 대화를 여는 첫인사 1~2문장 (70자 이내). 시간과 마음에 어울리게, 편하게 이야기를 꺼낼 수 있도록 열린 질문 하나로 끝내요.`,
+  },
+  summary: {
+    schema: obj({ summary: str }),
+    prompt: (p) => `아래는 사용자와 마음곁이 나눈 대화예요. 다음에 다시 이야기할 때 마음곁이 기억해 두면 좋을 내용을 요약해요.
+summary: 2~3문장, 150자 이내. 사용자가 겪은 일, 느낀 감정, 고민하거나 하려던 것 위주로 담담하게 적어요("~함", "~하는 중" 같은 짧은 말투).
+이름·연락처·주소·학교·회사 이름 같은 개인정보는 빼요. 자해·자살 이야기가 있었다면 방법이나 자세한 내용 없이 "많이 힘든 마음을 털어놓음" 정도로만 적어요.
+
+대화:
+${p.transcript}`,
   },
 }
 
 function comfortInput(kind, p) {
   const hour = Number.isInteger(p?.hour) && p.hour >= 0 && p.hour < 24 ? p.hour : new Date().getHours()
   if (kind === 'home') return { hour, hoursAway: typeof p.hoursAway === 'number' && p.hoursAway >= 0 ? Math.min(p.hoursAway, 24 * 365) : null }
-  if (kind === 'hello') return { hour, emotion: EMOTION_LABELS[p?.emotion] ? p.emotion : null }
+  if (kind === 'hello') return { hour, emotion: EMOTION_LABELS[p?.emotion] ? p.emotion : null, memory: memoryNote(p?.memory) }
+  if (kind === 'summary') {
+    // 요약할 만큼 이야기가 있어야 한다 (사용자 메시지 2개 이상)
+    const list = (Array.isArray(p?.messages) ? p.messages : [])
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
+      .slice(-SUMMARY_MESSAGES)
+    if (list.filter((m) => m.role === 'user').length < 2) return null
+    const transcript = list.map((m) => `${m.role === 'user' ? '사용자' : '마음곁'}: ${m.text.trim().slice(0, m.role === 'user' ? MAX_MESSAGE_CHARS : 300)}`).join('\n')
+    return { transcript }
+  }
   if (kind === 'journal') {
     if (!EMOTION_LABELS[p?.emotion] || !Number.isInteger(p?.level) || p.level < 1 || p.level > 5) return null
     return { emotion: p.emotion, level: p.level, note: typeof p.note === 'string' ? p.note.trim().slice(0, 300) : '' }
@@ -365,6 +412,10 @@ export async function handleComfort(req, res) {
     if (payload.kind === 'home') {
       const greeting = pick(out.greeting, 40), word = pick(out.word, 100)
       return greeting && word ? send(res, 200, { greeting, word }) : fail(res, 'upstream')
+    }
+    if (payload.kind === 'summary') {
+      const summary = pick(out.summary, 300)
+      return summary ? send(res, 200, { summary }) : fail(res, 'upstream')
     }
     const reply = pick(out.reply, 200)
     if (!reply) return fail(res, 'upstream', { crisis })

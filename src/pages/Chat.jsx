@@ -7,6 +7,7 @@ import Icon from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
 import { chatHello } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
+import { deleteMemory, loadMemory, memoryFor, saveSummary } from '../memory.js'
 
 let nextId = 1
 
@@ -16,6 +17,7 @@ const HISTORY = 10 // 서버로 보내는 최근 메시지 수
 const AUTH_ERRORS = ['login', 'not_verified', 'not_allowed', 'auth_setup']
 const SAVE_MAX = 200 // 대화 하나에 저장하는 최대 메시지 수 (보안 규칙과 같게)
 const LIST_MAX = 30 // 지난 대화 목록에 보여 줄 수
+const SUMMARY_EVERY = 3 // 사용자 메시지가 이만큼 늘 때마다 대화 요약(AI 기억)을 새로 만든다
 const when = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 const greeting = (picked) => ({
@@ -65,6 +67,44 @@ export default function Chat({ mood, go }) {
   const busy = useRef(false)
   const started = messages.some((m) => m.from === 'me')
 
+  // ---------- AI가 나를 기억하기 ----------
+  // 로그인하면 지난 대화 요약과 최근 마음 기록 감정을 불러와 두었다가, 대화를 보낼 때 함께 보낸다.
+  const memory = useRef(null)
+  const memoryLoad = useRef(null)
+  const uid = user?.uid
+  useEffect(() => {
+    memory.current = null
+    memoryLoad.current = uid && db ? loadMemory(uid).then((m) => (memory.current = m)) : null
+  }, [uid])
+
+  // 대화 요약: 대화 id마다 몇 번째 사용자 메시지까지 요약했는지 기억한다
+  const summarized = useRef({})
+  const summarize = (list, id, force = false) => {
+    if (!uid || !db || !id) return
+    const msgs = list.filter((m) => m.from === 'me' || m.from === 'bot')
+      .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', text: m.text }))
+    const count = msgs.filter((m) => m.role === 'user').length
+    const done = summarized.current[id] || 0
+    if (count < 2 || count <= done || (!force && count - done < SUMMARY_EVERY)) return
+    summarized.current[id] = count
+    saveSummary(uid, id, msgs, () => summarized.current[id] !== Infinity).then((ok) => {
+      if (!ok && summarized.current[id] !== Infinity) summarized.current[id] = done
+      else memoryLoad.current = loadMemory(uid).then((m) => (memory.current = m))
+    }, () => { if (summarized.current[id] !== Infinity) summarized.current[id] = done })
+  }
+  // 화면을 떠나거나 앱을 뒤로 보낼 때도 그때까지의 대화를 요약해 둔다
+  const latest = useRef({})
+  latest.current = { messages, summarize }
+  useEffect(() => {
+    const leave = () => latest.current.summarize(latest.current.messages, chatId.current, true)
+    const onHide = () => document.visibilityState === 'hidden' && leave()
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      leave()
+    }
+  }, [])
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, typing])
@@ -74,7 +114,9 @@ export default function Chat({ mood, go }) {
   useEffect(() => {
     if (!user || helloAsked.current) return
     helloAsked.current = true
-    askComfort({ kind: 'hello', emotion: mood || undefined }).then((r) => {
+    Promise.resolve(memoryLoad.current).catch(() => null).then((m) => (
+      askComfort({ kind: 'hello', emotion: mood || undefined, memory: memoryFor(m, null) || undefined })
+    )).then((r) => {
       if (!r?.reply) return
       setMessages((m) => (m.length === 1 && m[0].from === 'bot' && !chatId.current
         ? [{ ...m[0], id: nextId++, text: r.reply }] : m))
@@ -110,6 +152,8 @@ export default function Chat({ mood, go }) {
   }, [cloud, showPast, user?.uid])
 
   const reset = (list, id = null, m = mode) => {
+    summarize(messages, chatId.current, true) // 떠나는 대화를 기억해 둔다
+    if (id) summarized.current[id] ??= list.filter((x) => x.from === 'me').length
     request.current?.abort()
     busy.current = false
     setTyping(false)
@@ -127,6 +171,8 @@ export default function Chat({ mood, go }) {
     CHAT_MODES.some((x) => x.id === c.mode) ? c.mode : 'listen')
   const removeChat = (id) => {
     deleteDoc(doc(db, 'users', user.uid, 'chats', id)).catch(() => {})
+    deleteMemory(user.uid, id).then(() => { memoryLoad.current = loadMemory(user.uid).then((m) => (memory.current = m)) }, () => {})
+    summarized.current[id] = Infinity // 지운 대화는 다시 요약하지 않는다
     if (chatId.current === id) newChat()
   }
 
@@ -155,7 +201,7 @@ export default function Chat({ mood, go }) {
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: token ? 'Bearer ' + token : '' },
-        body: JSON.stringify({ mode, messages: history }),
+        body: JSON.stringify({ mode, messages: history, memory: memoryFor(memory.current, chatId.current) || undefined }),
         signal: controller.signal,
       })
       const data = await r.json().catch(() => ({}))
@@ -172,6 +218,7 @@ export default function Chat({ mood, go }) {
       const recent = m.slice(-4).some((x) => x.from === 'crisis')
       return [...m, ...added.filter((x) => !(x.from === 'crisis' && recent))]
     })
+    if (added.some((x) => x.from === 'bot')) summarize([...list, ...added], chatId.current)
     clearSlow()
     setSlow(0)
     setTyping(false)
