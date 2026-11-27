@@ -45,7 +45,7 @@ render.yaml        Render 설정
 ```
 
 Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`, `users/{uid}/memory/{대화 id}`(AI가 만든 대화 요약). 본인만 읽기·쓰기·삭제할 수 있어요.
-규칙을 바꾸면 `firestore.rules`를 고친 뒤 [Firebase 콘솔 규칙 화면](https://console.firebase.google.com/project/maeumgyeot-92e27/firestore/rules)에 붙여 넣고 게시해야 해요.
+규칙을 바꾸면(마지막 게시: 2026-11-27, memory·journal 고치기 포함) `firestore.rules`를 고친 뒤 [Firebase 콘솔 규칙 화면](https://console.firebase.google.com/project/maeumgyeot-92e27/firestore/rules)에 붙여 넣고 게시해야 해요.
 
 ## 환경변수
 
@@ -71,7 +71,7 @@ npm run build && npm start   # 배포와 같은 방식 (포트 3000)
 ## 운영 메모
 
 - Render 무료 750시간은 **계정 전체가 함께 써요**(같은 계정에 다른 앱도 있음). 그래서 서버를 24시간 깨워 두지 않아요. 오래 안 쓰면 마음 대화 첫 답장이 30~50초 걸릴 수 있어요. 화면은 서비스 워커 덕분에 바로 열려요.
-- Render 계정에 쓰지 않는 중복 서비스(`maeumgyeot.onrender.com`, 키 없음)가 있어요.
+- Render 계정에 쓰지 않는 중복 서비스(`maeumgyeot.onrender.com`, 키 없음)가 있어요. `render.yaml` Blueprint가 만든 것이라, 지우려면 Blueprint 연결을 먼저 끊어야 해요.
 - Render 환경변수와 Firebase 콘솔 작업은 계정 주인이 직접 해야 해요.
 
 ## 지금 상태와 다음 할 일 (2026-11-25 기준)
