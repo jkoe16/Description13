@@ -18,10 +18,10 @@ const b64json = (part) => JSON.parse(Buffer.from(part, 'base64url').toString('ut
 
 export const projectId = () => process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || ''
 
-// 허락한 이메일 목록 (쉼표로 구분). 비어 있으면 아무도 마음 대화를 쓸 수 없다.
+// 하루 사용 횟수 제한을 받지 않는 이메일 (쉼표로 구분, 예: 계정 주인). 그 밖의 로그인한 사람도 모두 쓸 수 있다.
 const allowed = () => (process.env.ALLOWED_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-// 결과: { ok: true, user } 또는 { ok: false, code: 'login' | 'not_verified' | 'not_allowed' }
+// 결과: { ok: true, user: { uid, email, unlimited } } 또는 { ok: false, code: 'login' | 'not_verified' }
 export async function checkUser(req) {
   const token = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1]
   if (!token) return { ok: false, code: 'login' }
@@ -50,8 +50,7 @@ export async function checkUser(req) {
   if (!valid) return { ok: false, code: 'login' }
 
   const email = String(claims.email || '').toLowerCase()
-  // 이메일 인증을 안 한 계정은 남의 이메일로 가입했을 수도 있으므로 허락 목록과 비교하지 않는다
+  // 이메일 인증을 안 한 계정은 아무 이메일로나 마구 만들 수 있으므로 AI를 쓰지 못하게 한다 (Google 로그인은 늘 인증됨)
   if (!claims.email_verified) return { ok: false, code: 'not_verified' }
-  if (!allowed().includes(email)) return { ok: false, code: 'not_allowed' }
-  return { ok: true, user: { uid: claims.sub, email } }
+  return { ok: true, user: { uid: claims.sub, email, unlimited: allowed().includes(email) } }
 }

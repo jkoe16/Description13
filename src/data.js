@@ -25,14 +25,6 @@ export const EMOTIONS = [
     comfort: '마음을 정확히 몰라도 괜찮아요. 모르는 채로 머물러도 돼요.' },
 ]
 
-export const CHAT_MODES = [
-  // 각 방식의 실제 답변 지침은 server/chat.js 의 MODES 에 있어요
-  { id: 'listen', label: '경청', desc: '조용히 들어 줘요' },
-  { id: 'empathy', label: '공감', desc: '마음을 함께 느껴요' },
-  { id: 'think', label: '함께 생각하기', desc: '천천히 정리해 봐요' },
-  { id: 'courage', label: '용기 주기', desc: '한 걸음 응원해요' },
-]
-
 export const BREATHING = [
   { id: 'box', name: '상자 호흡', summary: '4초씩 네 번, 마음을 가지런히',
     phases: [

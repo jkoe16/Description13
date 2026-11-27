@@ -177,15 +177,6 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .quick span { color: var(--ink-soft); font-size: 0.9rem; }
 
 /* ---------- 마음 대화 ---------- */
-.mode-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.mode {
-  padding: 14px; border-radius: var(--radius-sm); background: var(--card); text-align: left;
-  border: 2px solid transparent; box-shadow: var(--shadow); display: grid; gap: 2px;
-  transition: border-color 0.2s, background 0.2s;
-}
-.mode small { color: var(--ink-soft); font-size: 0.8rem; }
-.mode.active { border-color: var(--lavender); background: var(--lavender-soft); }
-.mode.active strong { color: var(--lavender-deep); }
 
 .chat { display: flex; flex-direction: column; padding: 0; overflow: hidden; height: min(620px, 64vh); }
 .chat .notice { margin: 14px 18px 0; }
@@ -451,8 +442,6 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   .emotion { padding: 12px 4px; font-size: 0.8rem; }
   .emotion .emoji { font-size: 1.35rem; }
   .quick-grid { grid-template-columns: 1fr; gap: 10px; }
-  .mode-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .mode { padding: 10px 12px; }
   .chat { height: calc(100dvh - 360px); min-height: 360px; }
   .sos-grid { grid-template-columns: 1fr; }
   .sos-card { grid-template-columns: auto 1fr auto; align-items: center; column-gap: 14px; padding: 16px; }
