@@ -57,6 +57,8 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .muted { color: var(--ink-soft); font-weight: 400; }
 .center { text-align: center; }
 
+[hidden] { display: none !important; }
+
 /* ---------- 레이아웃 ---------- */
 .app { min-height: 100vh; }
 .main {
