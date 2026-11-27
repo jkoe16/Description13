@@ -6,6 +6,7 @@ import {
 import { auth, authMessage, firebaseReady, useUser } from '../firebase.js'
 import MyData, { MemoryList, PrivacyNote } from '../components/MyData.jsx'
 import { THEME_CHOICES, getThemeChoice, setThemeChoice } from '../theme.js'
+import { OPERATOR } from '../policy.js'
 
 // 화면 밝기: 자동 / 항상 밝게 / 항상 어둡게 (로그인하지 않아도 쓸 수 있음)
 function ThemePicker() {
@@ -36,6 +37,7 @@ export default function Account({ go }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
+  const [agree, setAgree] = useState(false) // 가입할 때: 만 14세 이상·약관·개인정보(민감정보, 해외 전송) 동의
   const [dataVersion, setDataVersion] = useState(0) // 내 데이터를 지우면 AI 기억 목록을 다시 불러온다
 
   const run = async (fn) => {
@@ -127,7 +129,15 @@ export default function Account({ go }) {
 
         {firebaseReady && user === null && (
           <>
-            <button className="btn google" onClick={google} disabled={busy}>
+            <label className="consent">
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+              <span>
+                만 14세 이상이에요. <button type="button" className="link" onClick={() => go('terms')}>이용약관</button>과{' '}
+                <button type="button" className="link" onClick={() => go('privacy')}>개인정보처리방침</button>(마음 상태 같은 민감한 정보를 다루고,
+                AI 답장을 위해 해외로 보내는 것 포함)에 동의해요. <small>(가입할 때 필요해요)</small>
+              </span>
+            </label>
+            <button className="btn google" onClick={google} disabled={busy || !agree}>
               <span className="g-mark" aria-hidden="true">G</span> Google로 계속하기
             </button>
 
@@ -153,7 +163,8 @@ export default function Account({ go }) {
                   minLength={tab === 'signup' ? 6 : undefined} required />
               </label>
               {tab === 'signup' && <p className="form-note">비밀번호는 6자 이상이에요. 가입하면 인증 메일을 보내 드려요.</p>}
-              <button className="btn primary" disabled={busy}>{tab === 'signup' ? '가입하기' : '로그인'}</button>
+              <button className="btn primary" disabled={busy || (tab === 'signup' && !agree)}>{tab === 'signup' ? '가입하기' : '로그인'}</button>
+              {tab === 'signup' && !agree && <p className="form-note">위의 동의에 체크하면 가입할 수 있어요.</p>}
               {tab === 'login' && (
                 <button type="button" className="link" onClick={reset} disabled={busy}>비밀번호를 잊었어요</button>
               )}
@@ -169,6 +180,14 @@ export default function Account({ go }) {
       {firebaseReady && user && <MemoryList refresh={dataVersion} />}
       {firebaseReady && user && <MyData onChange={() => setDataVersion((v) => v + 1)} />}
       <PrivacyNote />
+      <section className="card privacy">
+        <h2>약관과 문의</h2>
+        <div className="policy-links">
+          <button className="link" onClick={() => go('privacy')}>개인정보처리방침</button>
+          <button className="link" onClick={() => go('terms')}>이용약관</button>
+          {OPERATOR.email && <a href={`mailto:${OPERATOR.email}?subject=${encodeURIComponent('[마음곁] 문의')}`}>문의하기</a>}
+        </div>
+      </section>
     </div>
   )
 }
