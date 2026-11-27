@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import {
-  addDoc, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp,
+  addDoc, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc,
 } from 'firebase/firestore'
 import { EMOTIONS } from '../data.js'
 import { db, useUser } from '../firebase.js'
 import { journalReply } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
+import JournalReview from '../components/JournalReview.jsx'
 
 const LEVELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
 const fmt = new Intl.DateTimeFormat('ko-KR', {
   month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit',
 })
 
-const SHOW = 50 // 화면에 보여 줄 최근 기록 수
+const SHOW = 120 // 불러오는 최근 기록 수 (30일 돌아보기에 넉넉하게, 하루 4번 기록해도 충분)
 
 export default function Journal({ go }) {
   const user = useUser()
@@ -24,6 +25,7 @@ export default function Journal({ go }) {
   const [reply, setReply] = useState(null) // 기록한 뒤 건네는 말 (다음 감정을 고를 때까지 남아 있음)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [editing, setEditing] = useState(null) // 고치는 중인 기록 { id, emotion, level, note }
 
   // 로그인한 계정의 기록을 실시간으로 불러온다 (users/{uid}/journal)
   useEffect(() => {
@@ -67,6 +69,23 @@ export default function Journal({ go }) {
     setEmotion(null)
     setLevel(3)
     setNote('')
+  }
+
+  // 기록 고치기: 감정·크기·메모만 바꾸고, 남긴 시간은 그대로 둔다
+  const saveEdit = async () => {
+    const { id, emotion: em, level: lv, note: nt } = editing
+    const change = { emotion: em, level: lv, note: nt.trim() }
+    setError('')
+    if (!cloud) {
+      setEntries((l) => l.map((x) => (x.id === id ? { ...x, ...change } : x)))
+      return setEditing(null)
+    }
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'journal', id), change)
+      setEditing(null)
+    } catch {
+      setError('기록을 고치지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.')
+    }
   }
 
   const remove = async (id) => {
@@ -158,6 +177,38 @@ export default function Journal({ go }) {
             <ul className="entries">
               {entries.map((en) => {
                 const e = EMOTIONS.find((x) => x.id === en.emotion)
+                if (editing?.id === en.id) {
+                  return (
+                    <li key={en.id} className="entry editing">
+                      <div className="entry-edit">
+                        <div className="emotion-grid compact mini" role="radiogroup" aria-label="감정 고르기">
+                          {EMOTIONS.map((x) => (
+                            <button key={x.id} role="radio" aria-checked={editing.emotion === x.id}
+                              className={`emotion tone-${x.tone}` + (editing.emotion === x.id ? ' selected' : '')}
+                              onClick={() => setEditing({ ...editing, emotion: x.id })}>
+                              <span className="emoji">{x.emoji}</span>{x.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="level-row" role="radiogroup" aria-label="감정의 크기">
+                          {LEVELS.map((label, i) => (
+                            <button key={label} role="radio" aria-checked={editing.level === i + 1}
+                              className={'level' + (editing.level >= i + 1 ? ' on' : '')} onClick={() => setEditing({ ...editing, level: i + 1 })}>
+                              <span className="dot" />
+                              <small>{label}</small>
+                            </button>
+                          ))}
+                        </div>
+                        <textarea className="field" rows={3} maxLength={300} value={editing.note} aria-label="메모 고치기"
+                          onChange={(ev) => setEditing({ ...editing, note: ev.target.value })} />
+                        <div className="account-row">
+                          <button className="btn primary small" onClick={saveEdit}>고친 대로 저장</button>
+                          <button className="btn ghost small" onClick={() => setEditing(null)}>취소</button>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                }
                 return (
                   <li key={en.id} className={`entry tone-${e.tone}`}>
                     <span className="emoji">{e.emoji}</span>
@@ -166,9 +217,14 @@ export default function Journal({ go }) {
                       <small>{fmt.format(en.at)}</small>
                       {en.note && <p>{en.note}</p>}
                     </div>
-                    <button className="link" onClick={() => remove(en.id)}>
-                      지우기
-                    </button>
+                    <div className="entry-actions">
+                      <button className="link" onClick={() => setEditing({ id: en.id, emotion: en.emotion, level: en.level, note: en.note || '' })}>
+                        고치기
+                      </button>
+                      <button className="link" onClick={() => remove(en.id)}>
+                        지우기
+                      </button>
+                    </div>
                   </li>
                 )
               })}
@@ -176,6 +232,8 @@ export default function Journal({ go }) {
           )}
         </section>
       </div>
+
+      {entries.length > 0 && <JournalReview entries={entries} partial={cloud && entries.length >= SHOW} />}
     </div>
   )
 }

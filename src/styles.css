@@ -288,6 +288,34 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .entry strong { display: block; color: var(--tone-deep); }
 .entry small { color: var(--ink-soft); font-size: 0.78rem; }
 .entry p { margin-top: 6px; line-height: 1.55; white-space: pre-wrap; }
+.entry-actions { display: grid; gap: 6px; justify-items: end; }
+.entry.editing { display: block; background: var(--surface); border: 1px solid var(--line); }
+.entry-edit { display: grid; gap: 12px; }
+.emotion-grid.mini { gap: 6px; }
+.emotion-grid.mini .emotion { padding: 8px 4px; font-size: 0.8rem; gap: 2px; }
+.emotion-grid.mini .emotion .emoji { font-size: 1.2rem; }
+
+/* ---------- 마음 돌아보기 ---------- */
+.journal-review { margin-top: 20px; display: grid; gap: 16px; }
+.journal-review .row-between { flex-wrap: wrap; gap: 10px; }
+.seg.small { grid-template-columns: auto auto; }
+.seg.small button { padding: 6px 12px; font-size: 0.85rem; white-space: nowrap; }
+.review-message { line-height: 1.65; color: var(--ink); }
+.day-strip { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-strip.month { grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.day-strip li { aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; align-content: center; gap: 2px; background: var(--tone, var(--cream)); }
+.day-strip li.none { background: transparent; border: 1px dashed var(--line); }
+.day-strip.month li { border-radius: 8px; }
+.day-strip .emoji { font-size: 1.3rem; line-height: 1; }
+.day-strip.month .emoji { font-size: 0.95rem; }
+.day-strip small { font-size: 0.7rem; color: var(--ink-soft); }
+.mood-bars { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.mood-bars li { display: grid; grid-template-columns: 7.5em 1fr 3em; align-items: center; gap: 10px; font-size: 0.88rem; }
+.mood-name { white-space: nowrap; color: var(--ink); }
+.bar-track { height: 10px; border-radius: 999px; background: var(--cream-deep); overflow: hidden; }
+.bar { display: block; height: 100%; border-radius: 999px; background: var(--lavender-deep); min-width: 4px; }
+.bar-count { text-align: right; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.small-note { font-size: 0.8rem; }
 
 /* ---------- 마음 휴식 ---------- */
 .breath-card { display: grid; justify-items: center; padding-block: 40px; }
@@ -459,6 +487,8 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--cream-deep); }
 .seg button { padding: 10px; border-radius: 10px; font-weight: 600; color: var(--ink-soft); }
 .seg button.active { background: var(--surface); color: var(--lavender-deep); box-shadow: var(--shadow); }
+.theme-card .seg { grid-template-columns: repeat(3, 1fr); }
+.theme-card .seg button { padding: 10px 4px; white-space: nowrap; }
 .auth-form { display: grid; gap: 12px; }
 .auth-form label { display: grid; gap: 6px; font-size: 0.88rem; font-weight: 600; }
 .auth-form input { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-weight: 400; background: var(--surface); }
@@ -537,7 +567,11 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 
 /* ---------- 내 데이터 · 개인정보 ---------- */
 .account-page { display: grid; gap: 16px; align-content: start; }
-.my-data, .privacy { max-width: 440px; display: grid; gap: 12px; }
+.my-data, .privacy, .memory-list, .theme-card { max-width: 440px; display: grid; gap: 12px; }
+.memory-list ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; max-height: 360px; overflow-y: auto; }
+.memory-list li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.memory-list li p { margin: 0; flex: 1; line-height: 1.5; }
+.memory-list li .link { flex-shrink: 0; }
 .data-actions { display: grid; gap: 8px; }
 .data-row { display: grid; gap: 8px; justify-items: start; }
 .data-row p { font-size: 0.9rem; }
