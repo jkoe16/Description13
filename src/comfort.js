@@ -1,6 +1,6 @@
 // 앱 곳곳에서 건네는 다정한 말 (AI가 아니라 미리 정해 둔 문장)
 
-// 오늘의 한 마디: 홈에 있는 동안 천천히 하나씩 바뀐다 (최근에 본 문장은 피해서)
+// 오늘의 한 마디: 앱을 열거나 새로고침할 때마다 하나씩 바뀐다 (최근에 본 문장은 피해서)
 export const DAILY_WORDS = [
   '오늘 하루를 버틴 것만으로도 충분히 잘했어요.',
   '느리게 가도 괜찮아요. 멈춰 있어도 괜찮아요.',
@@ -52,13 +52,14 @@ export const DAILY_WORDS = [
   '포기하고 싶었던 순간에도 여기까지 왔어요. 그건 정말 대단한 일이에요.',
 ]
 
-const recentWords = []
-// 다음에 보여 줄 한 마디: 최근 몇 개는 다시 고르지 않는다
+// 다음에 보여 줄 한 마디: 최근에 본 12개는 다시 고르지 않는다 (새로고침해도 기억하도록 이 기기에 저장)
+const RECENT_KEY = 'maeumgyeot-recent-words'
 export function nextWord() {
-  const pool = DAILY_WORDS.filter((w) => !recentWords.includes(w))
+  let recent = []
+  try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || [] } catch { /* 처음이거나 저장 못 함 */ }
+  const pool = DAILY_WORDS.filter((w) => !recent.includes(w))
   const word = pool[Math.floor(Math.random() * pool.length)]
-  recentWords.push(word)
-  if (recentWords.length > 12) recentWords.shift()
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify([...recent, word].slice(-12))) } catch { /* 괜찮음 */ }
   return word
 }
 export const dailyWord = nextWord

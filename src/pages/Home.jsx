@@ -17,7 +17,8 @@ function greeting() {
 export default function Home({ mood, setMood, go }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
   const user = useUser()
-  // 먼저 써 둔 문장을 보여 주고, 로그인했으면 AI가 만든 말로 바꾼다 (하루에 한 번)
+  // 오늘의 한 마디: 열거나 새로고침할 때마다 새 말, 홈에 있는 동안 30초마다 바뀌고 누르면 바로 다음 말.
+  // 맨 위 인사는 로그인했으면 AI가 만든 인사로 바꾼다 (하루에 한 번)
   const [words, setWords] = useState(() => ({ greeting: welcomeLine(), word: nextWord(), ai: false }))
   const [turn, setTurn] = useState(0) // 한 마디가 바뀔 때마다 늘어남 (부드럽게 나타나는 효과용)
   const showNext = () => {
@@ -32,12 +33,12 @@ export default function Home({ mood, setMood, go }) {
   useEffect(() => {
     if (!user) return
     const hit = cachedHome(user.uid)
-    if (hit) return setWords({ greeting: hit.greeting, word: hit.word, ai: true })
+    if (hit) return setWords((w) => ({ ...w, greeting: hit.greeting, ai: true }))
     let alive = true
     askComfort({ kind: 'home', hoursAway: awayHours() }).then((r) => {
       if (!alive || !r?.greeting) return
       saveHome(user.uid, r)
-      setWords({ greeting: r.greeting, word: r.word, ai: true })
+      setWords((w) => ({ ...w, greeting: r.greeting, ai: true }))
     })
     return () => { alive = false }
   }, [user?.uid])
@@ -50,7 +51,7 @@ export default function Home({ mood, setMood, go }) {
         <p className="lead">여기서는 잘하지 않아도 괜찮아요. 지금 마음이 어떤지 살짝 알려 주세요.</p>
         <button className="daily-word" onClick={showNext} title="누르면 다음 말을 보여 줘요">
           <small>오늘의 한 마디 <span className="word-hint">· 누르면 다음 말</span></small>
-          <p key={'w' + words.ai + turn} className="ai-swap">{words.word}</p>
+          <p key={'w' + turn} className="ai-swap">{words.word}</p>
         </button>
       </section>
 
