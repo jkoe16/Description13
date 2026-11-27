@@ -1,5 +1,8 @@
-// 눈물 쉼터의 소리. 소리 파일 없이 Web Audio로 그때그때 만든다.
-// 같은 모양이 되풀이되지 않도록 빗방울과 파도는 매번 조금씩 다르게(무작위로) 만든다.
+// 눈물 쉼터의 소리.
+// 빗소리·파도는 진짜 녹음을 쓰고, 받지 못했을 때만 Web Audio로 직접 만든 소리로 대신한다.
+// 음악은 파일 없이 Web Audio로 그때그때 만든다.
+import rainUrl from './sounds/rain.mp3'
+import wavesUrl from './sounds/waves.mp3'
 
 const rand = (a, b) => a + Math.random() * (b - a)
 
@@ -209,10 +212,10 @@ const BAR = 8 // 화음 하나의 길이(초)
 
 function makeMusic(ctx, out) {
   const bus = ctx.createGain()
-  bus.gain.value = 0.9
+  bus.gain.value = 0.65
   const lp = ctx.createBiquadFilter()
   lp.type = 'lowpass'
-  lp.frequency.value = 1800
+  lp.frequency.value = 1300
   const echo = ctx.createDelay()
   echo.delayTime.value = 0.42
   const fb = ctx.createGain()
@@ -248,7 +251,7 @@ function makeMusic(ctx, out) {
     ;[1.5, 4.5, 6.5].forEach((at) => {
       if (Math.random() < 0.55) {
         const m = MELODY[Math.floor(Math.random() * MELODY.length)]
-        tone(hz(m), t + at, 'triangle', 0.05, 0.02, t + at + 0.05, 0.9, t + at + 5)
+        tone(hz(m), t + at, 'sine', 0.04, 0.06, t + at + 0.1, 1.2, t + at + 6)
       }
     })
     bar++
@@ -263,8 +266,88 @@ function makeMusic(ctx, out) {
 }
 
 
-export function makeSound(ctx, id, out) {
+// ---------- 진짜로 녹음한 빗소리·파도 ----------
+// 출처(CC BY): 빗소리 alex36917, 파도 Luftrum (freesound.org, Blanket 앱의 편집본). 정책 화면에 표시한다.
+const RECORDINGS = { rain: rainUrl, waves: wavesUrl }
+const SOFTEN = { rain: 5200, waves: 6000 } // 높은 소리를 살짝 깎아 귀에 부드럽게
+const LEVEL = { rain: 2, waves: 1.6 }
+const FADE = 4 // 끝과 처음을 4초 동안 겹쳐 이어서, 반복되는 이음매가 들리지 않게
+const decoded = new Map() // 같은 화면에서 다시 고르면 다시 받지 않는다
+
+// 녹음의 끝부분을 처음 4초에 겹쳐 섞은 새 소리를 만든다. 이걸 반복하면 이음매가 없다.
+// (타이머 없이 반복되므로 화면이 잠깐 꺼지거나 다른 앱을 봐도 끊기지 않는다)
+function seamless(ctx, buf) {
+  const f = Math.floor(FADE * buf.sampleRate)
+  const n = buf.length
+  if (n < f * 3) return buf
+  const out = ctx.createBuffer(buf.numberOfChannels, n - f, buf.sampleRate)
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const src = buf.getChannelData(ch)
+    const dst = out.getChannelData(ch)
+    dst.set(src.subarray(f, n - f), f)
+    for (let i = 0; i < f; i++) {
+      const x = (i / f) * (Math.PI / 2)
+      dst[i] = src[i] * Math.sin(x) + src[n - f + i] * Math.cos(x)
+    }
+  }
+  return out
+}
+
+function loadRecording(ctx, id) {
+  const key = id
+  if (!decoded.has(key) || decoded.get(key).ctx !== ctx) {
+    const promise = fetch(RECORDINGS[id])
+      .then((r) => { if (!r.ok) throw new Error('load'); return r.arrayBuffer() })
+      .then((b) => new Promise((ok, fail) => ctx.decodeAudioData(b, ok, fail)))
+      .then((buf) => seamless(ctx, buf))
+    decoded.set(key, { ctx, promise })
+  }
+  return decoded.get(key).promise
+}
+
+function makeRecording(ctx, id, out, onState) {
+  let stopped = false
+  let fallback = null
+  const live = new Set()
+  const lp = ctx.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = SOFTEN[id]
+  lp.Q.value = 0.5
+  const level = ctx.createGain()
+  level.gain.value = LEVEL[id]
+  lp.connect(level).connect(out)
+
+  const play = (buf) => {
+    const s = ctx.createBufferSource()
+    s.buffer = buf
+    s.loop = true
+    s.connect(lp)
+    s.start(ctx.currentTime + 0.05)
+    live.add(s)
+  }
+
+  onState?.('loading')
+  loadRecording(ctx, id).then((buf) => {
+    if (stopped) return
+    onState?.('ready')
+    play(buf)
+  }, () => {
+    // 받지 못하면(인터넷이 끊겼을 때 등) 직접 만든 소리로 대신한다
+    if (stopped) return
+    onState?.('ready')
+    fallback = id === 'rain' ? makeRain(ctx, out) : makeWaves(ctx, out)
+  })
+
+  return () => {
+    stopped = true
+    live.forEach((s) => { try { s.stop() } catch { /* 이미 멈춤 */ } })
+    fallback?.()
+    lp.disconnect()
+    level.disconnect()
+  }
+}
+
+export function makeSound(ctx, id, out, onState) {
   if (id === 'music') return makeMusic(ctx, out)
-  if (id === 'rain') return makeRain(ctx, out)
-  return makeWaves(ctx, out)
+  return makeRecording(ctx, id, out, onState)
 }
