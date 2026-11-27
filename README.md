@@ -13,7 +13,7 @@
 | 화면 | 주소 | 내용 |
 |---|---|---|
 | 홈 | `#/home` | 인사·오늘의 한 마디(로그인 시 하루 1번 AI가 만듦), 감정 선택, 눈물 쉼터 입구 |
-| 마음 대화 | `#/chat` | AI 대화(경청·공감·함께 생각하기·용기 주기). 로그인한 허락 계정만. 자동 저장, 지난 대화·새 대화, 위기 시 109 카드 |
+| 마음 대화 | `#/chat` | AI 대화(경청·공감·함께 생각하기·용기 주기). 로그인(이메일 인증)한 누구나, 하루 60번까지. 자동 저장, 지난 대화·새 대화, 위기 시 109 카드 |
 | 마음 기록 | `#/journal` | 감정·크기·메모. 로그인 시 계정에 저장, 감정별 위로(로그인 시 AI가 메모를 읽고 위로), 기록 고치기, 마음 돌아보기(7일·30일) |
 | 마음 휴식 | `#/rest` | 호흡 안내 |
 | 도움받기 | `#/help` | 109·112·119, 상담기관 |
@@ -28,7 +28,7 @@
 server/            Node 내장 모듈만 사용
   index.js         dist 정적 파일 + /api/chat, /api/comfort, /api/health
   chat.js          마음 대화(json_schema로 reply+risk), 다정한 말(handleComfort), 위기 표현 정규식, IP당 분당 12회 제한
-  auth.js          Firebase ID 토큰 검증(내장 crypto), email_verified 필수, ALLOWED_EMAILS 비교
+  auth.js          Firebase ID 토큰 검증(내장 crypto), email_verified 필수 (ALLOWED_EMAILS는 하루 제한 없음)
 src/
   App.jsx          해시 라우팅, 새 버전 안내 띠
   firebase.js      Firebase 초기화, useUser, 로그인 오류 문구
@@ -55,7 +55,8 @@ Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`, `users/{
 |---|---|
 | `OPENAI_API_KEY` | AI 답장 (필수) |
 | `OPENAI_MODEL` | 선택, 기본 `gpt-6-luna` |
-| `ALLOWED_EMAILS` | 마음 대화·AI 문장을 쓸 수 있는 이메일 (쉼표로 구분) |
+| `ALLOWED_EMAILS` | 하루 횟수 제한 없이 쓸 이메일 (쉼표로 구분, 예: 계정 주인). 다른 사람도 로그인(이메일 인증)하면 모두 쓸 수 있음 |
+| `DAILY_CHAT_LIMIT`, `DAILY_COMFORT_LIMIT` | 선택, 한 사람이 하루에 쓸 수 있는 마음 대화(기본 60)·다정한 말(기본 40) 횟수 |
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Firebase 웹 설정 (빌드 때 화면에 들어감) |
 | `TRUST_PROXY` | Render에서는 `1` |
 
@@ -85,6 +86,6 @@ npm run build && npm start   # 배포와 같은 방식 (포트 3000)
 3. ~~AI가 나를 기억하기~~ (대화 요약 + 최근 기록 감정, 2026-11-27)
 4. ~~밤 모드 직접 켜고 끄기~~ (내 계정 → 화면 밝기, 2026-11-27)
 5. ~~마음 기록 돌아보기, 기록 고치기~~ (2026-11-27)
-6. `src/pages/Chat.jsx` 정리 (기능이 늘어 파일이 커짐)
+6. ~~`src/pages/Chat.jsx` 정리~~ (2026-11-27)
 
 예전에 나온 다른 아이디어: 말로 하는 대화(음성 입력), 위로 보관함.

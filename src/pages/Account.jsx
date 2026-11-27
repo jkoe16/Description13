@@ -97,7 +97,7 @@ export default function Account({ go }) {
       <header className="page-head">
         <div>
           <h1>내 계정</h1>
-          <p className="muted">로그인하면 허락된 계정으로 마음 대화를 쓸 수 있어요.</p>
+          <p className="muted">로그인하면 누구나 마음 대화를 쓸 수 있어요.</p>
         </div>
       </header>
 

@@ -1,24 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc,
-} from 'firebase/firestore'
+import { collection, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { CHAT_MODES, EMOTIONS } from '../data.js'
 import Icon from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
 import { chatHello } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
-import { deleteMemory, loadMemory, memoryFor, saveSummary } from '../memory.js'
+import { memoryFor } from '../memory.js'
+import CrisisCard from '../components/chat/CrisisCard.jsx'
+import PastChats from '../components/chat/PastChats.jsx'
+import useChatMemory from '../components/chat/useChatMemory.js'
 
 let nextId = 1
 
 const MAX_CHARS = 500 // 서버 제한과 같게 유지
 const HISTORY = 10 // 서버로 보내는 최근 메시지 수
 
-const AUTH_ERRORS = ['login', 'not_verified', 'not_allowed', 'auth_setup']
+const AUTH_ERRORS = ['login', 'not_verified', 'auth_setup']
 const SAVE_MAX = 200 // 대화 하나에 저장하는 최대 메시지 수 (보안 규칙과 같게)
-const LIST_MAX = 30 // 지난 대화 목록에 보여 줄 수
-const SUMMARY_EVERY = 3 // 사용자 메시지가 이만큼 늘 때마다 대화 요약(AI 기억)을 새로 만든다
-const when = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 const greeting = (picked) => ({
   id: nextId++, from: 'bot',
@@ -26,12 +24,6 @@ const greeting = (picked) => ({
     ? `'${picked.label}' 마음으로 와 주었군요. 어떤 일이 있었는지 편하게 들려주세요.`
     : chatHello(),
 })
-
-const SOS = [
-  { number: '109', label: '자살예방상담 (24시간)' },
-  { number: '112', label: '경찰 · 위험한 상황' },
-  { number: '119', label: '응급 상황' },
-]
 
 const STARTERS = [
   '오늘 있었던 일을 이야기하고 싶어요.',
@@ -57,7 +49,6 @@ export default function Chat({ mood, go }) {
   const [messages, setMessages] = useState(() => [greeting(picked)])
   const cloud = Boolean(user && db) // 로그인하면 대화를 계정에 저장 (users/{uid}/chats)
   const [showPast, setShowPast] = useState(false)
-  const [past, setPast] = useState(null) // null = 불러오는 중
   const [saveError, setSaveError] = useState(false)
   const chatId = useRef(null)
   const lastSaved = useRef('')
@@ -67,43 +58,8 @@ export default function Chat({ mood, go }) {
   const busy = useRef(false)
   const started = messages.some((m) => m.from === 'me')
 
-  // ---------- AI가 나를 기억하기 ----------
-  // 로그인하면 지난 대화 요약과 최근 마음 기록 감정을 불러와 두었다가, 대화를 보낼 때 함께 보낸다.
-  const memory = useRef(null)
-  const memoryLoad = useRef(null)
-  const uid = user?.uid
-  useEffect(() => {
-    memory.current = null
-    memoryLoad.current = uid && db ? loadMemory(uid).then((m) => (memory.current = m)) : null
-  }, [uid])
-
-  // 대화 요약: 대화 id마다 몇 번째 사용자 메시지까지 요약했는지 기억한다
-  const summarized = useRef({})
-  const summarize = (list, id, force = false) => {
-    if (!uid || !db || !id) return
-    const msgs = list.filter((m) => m.from === 'me' || m.from === 'bot')
-      .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', text: m.text }))
-    const count = msgs.filter((m) => m.role === 'user').length
-    const done = summarized.current[id] || 0
-    if (count < 2 || count <= done || (!force && count - done < SUMMARY_EVERY)) return
-    summarized.current[id] = count
-    saveSummary(uid, id, msgs, () => summarized.current[id] !== Infinity).then((ok) => {
-      if (!ok && summarized.current[id] !== Infinity) summarized.current[id] = done
-      else memoryLoad.current = loadMemory(uid).then((m) => (memory.current = m))
-    }, () => { if (summarized.current[id] !== Infinity) summarized.current[id] = done })
-  }
-  // 화면을 떠나거나 앱을 뒤로 보낼 때도 그때까지의 대화를 요약해 둔다
-  const latest = useRef({})
-  latest.current = { messages, summarize }
-  useEffect(() => {
-    const leave = () => latest.current.summarize(latest.current.messages, chatId.current, true)
-    const onHide = () => document.visibilityState === 'hidden' && leave()
-    document.addEventListener('visibilitychange', onHide)
-    return () => {
-      document.removeEventListener('visibilitychange', onHide)
-      leave()
-    }
-  }, [])
+  // AI가 나를 기억하기 (지난 대화 요약·최근 감정, 대화 요약 저장) → src/components/chat/useChatMemory.js
+  const { memory, memoryLoad, summarize, forget, opened } = useChatMemory(user?.uid, chatId, messages)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -140,20 +96,9 @@ export default function Chat({ mood, go }) {
       .then(() => setSaveError(false), () => setSaveError(true))
   }, [messages, mode, cloud, started, user?.uid])
 
-  // 지난 대화 목록 (패널을 열었을 때만 불러옴)
-  useEffect(() => {
-    if (!cloud || !showPast) return
-    setPast(null)
-    const q = query(collection(db, 'users', user.uid, 'chats'), orderBy('updatedAt', 'desc'), limit(LIST_MAX))
-    return onSnapshot(q, (snap) => setPast(snap.docs.map((d) => {
-      const v = d.data({ serverTimestamps: 'estimate' })
-      return { id: d.id, ...v, updatedAt: v.updatedAt?.toDate() || new Date() }
-    })), () => setPast([]))
-  }, [cloud, showPast, user?.uid])
-
   const reset = (list, id = null, m = mode) => {
     summarize(messages, chatId.current, true) // 떠나는 대화를 기억해 둔다
-    if (id) summarized.current[id] ??= list.filter((x) => x.from === 'me').length
+    if (id) opened(id, list)
     request.current?.abort()
     busy.current = false
     setTyping(false)
@@ -171,8 +116,7 @@ export default function Chat({ mood, go }) {
     CHAT_MODES.some((x) => x.id === c.mode) ? c.mode : 'listen')
   const removeChat = (id) => {
     deleteDoc(doc(db, 'users', user.uid, 'chats', id)).catch(() => {})
-    deleteMemory(user.uid, id).then(() => { memoryLoad.current = loadMemory(user.uid).then((m) => (memory.current = m)) }, () => {})
-    summarized.current[id] = Infinity // 지운 대화는 다시 요약하지 않는다
+    forget(id) // 그 대화의 AI 기억도 지운다
     if (chatId.current === id) newChat()
   }
 
@@ -208,7 +152,7 @@ export default function Chat({ mood, go }) {
       if (data.crisis) added.push({ id: nextId++, from: 'crisis' })
       added.push(r.ok && data.reply
         ? { id: nextId++, from: 'bot', text: data.reply }
-        : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needLogin: AUTH_ERRORS.includes(data.error), retry: !['too_long', 'no_key', ...AUTH_ERRORS].includes(data.error) })
+        : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needLogin: AUTH_ERRORS.includes(data.error), retry: !['too_long', 'no_key', 'daily_limit', ...AUTH_ERRORS].includes(data.error) })
     } catch (e) {
       if (e.name === 'AbortError') return clearSlow()
       added.push({ id: nextId++, from: 'error', text: '인터넷 연결을 확인하고 다시 시도해 주세요.', retry: true })
@@ -275,26 +219,7 @@ export default function Chat({ mood, go }) {
       </div>
 
       {showPast && cloud && (
-        <section className="card past-chats" aria-label="지난 대화">
-          <h2>지난 대화</h2>
-          {past === null ? (
-            <p className="muted">불러오고 있어요…</p>
-          ) : past.length === 0 ? (
-            <p className="muted">아직 저장된 대화가 없어요.</p>
-          ) : (
-            <ul>
-              {past.map((c) => (
-                <li key={c.id} className={chatId.current === c.id ? 'current' : ''}>
-                  <button className="past-open" onClick={() => openChat(c)}>
-                    <strong>{c.title}</strong>
-                    <small>{when.format(c.updatedAt)} · 메시지 {c.messages?.length || 0}개</small>
-                  </button>
-                  <button className="link" onClick={() => removeChat(c.id)}>지우기</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <PastChats uid={user.uid} currentId={chatId.current} onOpen={openChat} onRemove={removeChat} />
       )}
 
       <section className="chat card">
@@ -308,20 +233,7 @@ export default function Chat({ mood, go }) {
         <div className="messages" aria-live="polite">
           {messages.map((m) => {
             if (m.from === 'crisis') {
-              return (
-                <div key={m.id} className="crisis-card" role="alert">
-                  <strong>지금 많이 힘들다면, 혼자 견디지 않아도 돼요.</strong>
-                  <p>바로 전화할 수 있는 곳이에요. 곁에 있는 믿을 수 있는 사람에게도 지금 알려 주세요.</p>
-                  <div className="crisis-actions">
-                    {SOS.map((s) => (
-                      <a key={s.number} className="crisis-call" href={`tel:${s.number}`}>
-                        <b>{s.number}</b><small>{s.label}</small>
-                      </a>
-                    ))}
-                  </div>
-                  <button className="link" onClick={() => go('help')}>다른 상담기관 보기</button>
-                </div>
-              )
+              return <CrisisCard key={m.id} go={go} />
             }
             if (m.from === 'error') {
               return (
