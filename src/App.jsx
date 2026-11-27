@@ -18,6 +18,9 @@ export default function App() {
   const [page, setPage] = useState(readPage)
   const [mood, setMood] = useState(null)
   const [update, setUpdate] = useState(false) // 새 버전이 준비됐는지
+  // 마음 대화는 한 번 열면 다른 화면에 다녀와도 그대로 남아 있게 한다 (실수로 메뉴를 눌러도 대화가 사라지지 않게)
+  const [chatOpened, setChatOpened] = useState(page === 'chat')
+  useEffect(() => { if (page === 'chat') setChatOpened(true) }, [page])
 
   useEffect(() => {
     const on = () => setUpdate(true)
@@ -40,18 +43,17 @@ export default function App() {
 
   const screens = {
     home: <Home mood={mood} setMood={setMood} go={go} />,
-    chat: <Chat mood={mood} go={go} />,
     journal: <Journal go={go} />,
     rest: <Rest />,
     help: <Help />,
     account: <Account go={go} />,
   }
 
-  // 눈물 쉼터는 메뉴 없이 화면 전체를 쓴다
-  if (page === 'cry') return <Cry go={go} />
-
+  // 눈물 쉼터는 메뉴 없이 화면 전체를 쓴다 (그동안 마음 대화는 숨겨 둔 채 남겨 둔다)
   return (
-    <div className="app">
+    <>
+    {page === 'cry' && <Cry go={go} />}
+    <div className="app" hidden={page === 'cry'}>
       <Nav page={page} go={go} />
       {update && (
         <div className="update-bar" role="status">
@@ -60,9 +62,17 @@ export default function App() {
           <button className="link" onClick={() => setUpdate(false)}>나중에</button>
         </div>
       )}
-      <main className="main" key={page}>
-        {screens[page]}
-      </main>
+      {screens[page] && (
+        <main className="main" key={page}>
+          {screens[page]}
+        </main>
+      )}
+      {chatOpened && (
+        <main className="main" hidden={page !== 'chat'}>
+          <Chat mood={mood} go={go} active={page === 'chat'} />
+        </main>
+      )}
     </div>
+    </>
   )
 }

@@ -22,16 +22,9 @@ const MODE = 'together' // 대화 방식은 하나로 합침. 저장 형식(보�
 const greeting = (picked) => ({
   id: nextId++, from: 'bot',
   text: picked
-    ? `'${picked.label}' 마음으로 와 주었군요. 어떤 일이 있었는지 편하게 들려주세요.`
+    ? `'${picked.label}' 마음을 안고 여기까지 와 줬네요. 어떤 일이 있었는지, 말하고 싶은 만큼만 천천히 들려줘요.`
     : chatHello(),
 })
-
-const STARTERS = [
-  '오늘 있었던 일을 이야기하고 싶어요.',
-  '요즘 마음이 복잡해요.',
-  '누군가에게 위로받고 싶어요.',
-  '그냥 편하게 이야기하고 싶어요.',
-]
 
 // 오래 쉬던 무료 서버가 깨어나는 동안 보여 주는 말. 기다림이 길어질수록 조금씩 바뀐다.
 const SLOW_NOTES = [
@@ -40,7 +33,7 @@ const SLOW_NOTES = [
   '거의 다 왔어요. 처음 한 번만 이렇게 늦고, 다음부터는 금방 답할게요.',
 ]
 
-export default function Chat({ mood, go }) {
+export default function Chat({ mood, go, active = true }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
   const [text, setText] = useState('')
   const [typing, setTyping] = useState(false)
@@ -65,19 +58,45 @@ export default function Chat({ mood, go }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, typing])
 
-  // 로그인했으면 첫인사를 AI가 시간과 마음에 맞춰 건넨다 (아직 아무 말도 안 했을 때만 바꿈)
-  const helloAsked = useRef(false)
-  useEffect(() => {
-    if (!user || helloAsked.current) return
-    helloAsked.current = true
+  // 첫인사: 로그인했으면 AI가 시간과 마음, 지난 이야기에 맞춰 건넨다. 아직 아무 말도 안 했을 때만 바꾼다.
+  const helloSeq = useRef(0)
+  const blank = (m) => !chatId.current && !m.some((x) => x.from === 'me')
+  const sayHello = (emotion) => {
+    const seq = ++helloSeq.current
+    if (!user) return
     Promise.resolve(memoryLoad.current).catch(() => null).then((m) => (
-      askComfort({ kind: 'hello', emotion: mood || undefined, memory: memoryFor(m, null) || undefined })
+      askComfort({ kind: 'hello', emotion: emotion || undefined, memory: memoryFor(m, null) || undefined })
     )).then((r) => {
-      if (!r?.reply) return
-      setMessages((m) => (m.length === 1 && m[0].from === 'bot' && !chatId.current
-        ? [{ ...m[0], id: nextId++, text: r.reply }] : m))
+      if (!r?.reply || seq !== helloSeq.current) return
+      setMessages((m) => (m.length === 1 && blank(m) ? [{ ...m[0], id: nextId++, text: r.reply }] : m))
     })
-  }, [user, mood])
+  }
+  // 고른 마음이나 계정이 바뀌면 (아직 대화를 시작하지 않았을 때) 첫인사를 새로 건넨다
+  const helloFor = useRef('')
+  useEffect(() => {
+    if (user === undefined) return
+    const key = `${user?.uid || ''}|${mood || ''}`
+    if (helloFor.current === key) return
+    const changed = helloFor.current !== ''
+    helloFor.current = key
+    if (changed) setMessages((m) => (blank(m) ? [greeting(picked)] : m))
+    sayHello(mood)
+  }, [user, mood]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 로그아웃하거나 다른 계정으로 바꾸면 화면의 대화를 비운다 (같은 기기를 쓰는 다른 사람에게 보이지 않게).
+  // 로그인하지 않고 나누던 대화는 로그인하면 그대로 이어지고, 그때부터 계정에 저장된다.
+  const lastUid = useRef(null)
+  useEffect(() => {
+    if (user === undefined) return
+    const prev = lastUid.current
+    lastUid.current = user?.uid || null
+    if (prev && prev !== lastUid.current) reset([greeting(picked)], null, false)
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 다른 화면으로 가면 그때까지의 대화를 기억(요약)해 둔다. 대화 자체는 화면에 그대로 남아 있다.
+  useEffect(() => {
+    if (!active) summarize(messages, chatId.current, true)
+  }, [active]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 화면을 떠나면 진행 중인 요청을 취소
   useEffect(() => () => request.current?.abort(), [])
@@ -96,8 +115,8 @@ export default function Chat({ mood, go }) {
       .then(() => setSaveError(false), () => setSaveError(true))
   }, [messages, cloud, started, user?.uid])
 
-  const reset = (list, id = null) => {
-    summarize(messages, chatId.current, true) // 떠나는 대화를 기억해 둔다
+  const reset = (list, id = null, remember = true) => {
+    if (remember) summarize(messages, chatId.current, true) // 떠나는 대화를 기억해 둔다
     if (id) opened(id, list)
     request.current?.abort()
     busy.current = false
@@ -110,7 +129,10 @@ export default function Chat({ mood, go }) {
     setSaveError(false)
   }
 
-  const newChat = () => reset([greeting(null)])
+  const newChat = () => {
+    reset([greeting(null)])
+    sayHello(null)
+  }
   const openChat = (c) => reset((c.messages || []).map((m) => ({ id: nextId++, from: m.from, text: m.text })), c.id)
   const removeChat = (id) => {
     deleteDoc(doc(db, 'users', user.uid, 'chats', id)).catch(() => {})
@@ -211,14 +233,15 @@ export default function Chat({ mood, go }) {
       )}
 
       <section className="chat card">
-        <p className="notice">
-          {cloud
-            ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
-            : 'AI가 답해요. 전문 상담을 대신할 수 없어요. 로그인하지 않으면 대화가 저장되지 않고, 화면을 나가면 사라져요.'}
-          {' '}<button className="link" onClick={() => go('account')}>개인정보 안내</button>
-        </p>
         {saveError && <p className="form-error" role="alert">대화를 저장하지 못했어요. 인터넷 연결을 확인해 주세요.</p>}
         <div className="messages" aria-live="polite">
+          {/* 안내는 대화와 함께 위로 밀려 올라가게 해서, 작은 화면에서도 대화 칸을 넓게 쓴다 */}
+          <p className="notice">
+            {cloud
+              ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
+              : 'AI가 답해요. 전문 상담을 대신할 수 없어요. 로그인하지 않으면 대화가 저장되지 않고, 앱을 닫으면 사라져요.'}
+            {' '}<button className="link" onClick={() => go('account')}>개인정보 안내</button>
+          </p>
           {messages.map((m) => {
             if (m.from === 'crisis') {
               return <CrisisCard key={m.id} go={go} />
@@ -242,16 +265,6 @@ export default function Chat({ mood, go }) {
               </div>
             )
           })}
-          {!started && (
-            <div className="starters">
-              <p>이렇게 시작해 볼 수도 있어요</p>
-              <div className="starter-list">
-                {STARTERS.map((s) => (
-                  <button key={s} className="starter" onClick={() => send(s)}>{s}</button>
-                ))}
-              </div>
-            </div>
-          )}
           {typing && (
             <div className="bubble-row bot">
               <span className="avatar">곁</span>

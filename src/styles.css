@@ -57,6 +57,8 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .muted { color: var(--ink-soft); font-weight: 400; }
 .center { text-align: center; }
 
+[hidden] { display: none !important; }
+
 /* ---------- 레이아웃 ---------- */
 .app { min-height: 100vh; }
 .main {
@@ -179,7 +181,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 /* ---------- 마음 대화 ---------- */
 
 .chat { display: flex; flex-direction: column; padding: 0; overflow: hidden; height: min(620px, 64vh); }
-.chat .notice { margin: 14px 18px 0; }
+.chat .notice { margin: 0; }
 .messages { flex: 1; overflow-y: auto; padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
 .bubble-row { display: flex; gap: 10px; align-items: flex-end; animation: fadeUp 0.3s ease; }
 .bubble-row.me { justify-content: flex-end; }
@@ -218,16 +220,6 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   .crisis-card { margin-left: 0; }
   .crisis-actions { grid-template-columns: 1fr; }
 }
-.starters { margin: 4px 0 0 44px; animation: fadeUp 0.3s ease; }
-.starters p { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 10px; }
-.starter-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.starter {
-  padding: 10px 16px; border-radius: 999px; font-size: 0.9rem; text-align: left;
-  background: var(--surface); border: 1px solid rgba(111, 95, 176, 0.28); color: var(--lavender-deep);
-  transition: background 0.2s, border-color 0.2s;
-}
-.starter:hover { background: var(--lavender-soft); border-color: var(--lavender); }
-@media (max-width: 860px) { .starters { margin-left: 0; } }
 .typing { display: flex; gap: 5px; padding: 16px 18px; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--lavender); animation: blink 1.2s infinite; }
 .typing i:nth-child(2) { animation-delay: 0.15s; }
@@ -442,7 +434,8 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   .emotion { padding: 12px 4px; font-size: 0.8rem; }
   .emotion .emoji { font-size: 1.35rem; }
   .quick-grid { grid-template-columns: 1fr; gap: 10px; }
-  .chat { height: calc(100dvh - 360px); min-height: 360px; }
+  /* 휴대폰: 위 제목과 아래 메뉴 사이를 대화창이 꽉 채우게 */
+  .chat { height: calc(100dvh - 250px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 340px; }
   .sos-grid { grid-template-columns: 1fr; }
   .sos-card { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; row-gap: 4px; padding: 16px; }
   .sos-number { grid-row: span 2; font-size: 1.9rem; }
@@ -502,7 +495,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .past-open { flex: 1; min-width: 0; text-align: left; display: grid; gap: 2px; }
 .past-open strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .past-open small { color: var(--ink-soft); font-size: 0.78rem; }
-.chat > .form-error { margin-bottom: 8px; }
+.chat > .form-error { margin: 14px 18px 0; }
 
 /* ---------- 눈물 쉼터 ---------- */
 .cry-entry {

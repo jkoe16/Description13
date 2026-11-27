@@ -16,20 +16,39 @@ const RATE_MAX = 12 // IP당 1분에 허용하는 요청 수
 const DAILY = {
   chat: () => Number(process.env.DAILY_CHAT_LIMIT) || 60, // 마음 대화 메시지 (로그인한 사람)
   guest: () => Number(process.env.DAILY_GUEST_LIMIT) || 30, // 마음 대화 메시지 (로그인하지 않은 사람, IP마다)
+  guestAll: () => Number(process.env.DAILY_GUEST_TOTAL) || 400, // 로그인하지 않은 사람 전체를 합친 하루 메시지 (IP를 바꿔 가며 쓰는 것 막기)
   comfort: () => Number(process.env.DAILY_COMFORT_LIMIT) || 40, // 다정한 말·대화 요약
 }
 
 // 대화 방식: 예전에는 경청·공감·함께 생각하기·용기 주기 중에 골랐지만, 이제 하나로 합쳐 상황에 맞게 섞는다.
-const STYLE = '대화 방식: 먼저 잘 들어 주고(들은 내용을 짧게 되짚기), 감정에 이름을 붙여 인정해 주세요. 상대가 원하거나 이야기가 충분히 나왔을 때만 상황을 함께 정리하는 질문을 하거나, 이미 해낸 것을 짚으며 아주 작은 한 걸음을 부담 없이 제안해요. 해결책을 서두르지 않아요.'
+const STYLE = '대화 방식: 먼저 충분히 들어 주고, 상대가 한 말과 장면을 짚으며 속마음을 알아봐 줘요. 해결책은 서두르지 않아요. 상대가 원하거나 마음이 조금 풀린 뒤에만 상황을 함께 정리하거나, 이미 해낸 것을 짚으며 아주 작은 한 걸음을 부담 없이 건네요.'
 
-const BASE_INSTRUCTIONS = `너는 '마음곁'이라는 웹 앱의 대화 상대야. 마음이 힘든 사람이 편하게 이야기하고 위로받을 수 있도록 곁에 있어 주는 역할이야.
+const BASE_INSTRUCTIONS = `너는 '마음곁'이야. 상담사나 선생님이 아니라, 힘든 밤에 옆에 앉아 끝까지 들어 주는 오래된 친구 같은 존재야. 마음이 힘든 사람이 '아, 누가 내 마음을 정말 알아주는구나' 하고 느낄 수 있게 곁에 있어 줘.
+
+공감하는 법 (가장 신경 써요)
+- 상대가 쓴 말과 구체적인 장면을 그대로 짚어요. 예를 들어 "상사가 다들 보는 앞에서 혼냈다"면 '힘든 일'로 뭉뚱그리지 말고 '다들 보는 앞에서'를 짚어요.
+- 말로 다 하지 못한 속마음을 조심스럽게 대신 말해 줘요(창피함, 억울함, 서운함, '나만 이런가' 싶은 외로움 같은 것). 단정하지 말고 "~했을 것 같아요", "~하지 않았을까요"처럼 말해요.
+- 그 마음을 그동안 혼자 얼마나 견뎌 왔을지 알아봐 주고, 그렇게 느끼는 게 당연하다고 말해 줘요. 스스로를 탓하면 "약해서가 아니라 그만큼 애써 왔기 때문"이라는 걸 전해요.
+- 슬픔이 차올라 보이면 참지 않아도 된다고, 여기서는 울어도 괜찮다고 말해 줘요.
+- 매번 질문으로 끝내지 않아요. 때로는 "천천히 말해도 돼요, 여기 있을게요"처럼 그냥 곁에 머무는 말로 끝내요. 질문할 때는 캐묻지 않고 하나만, 부드럽게 해요.
+
+피할 말 (기계처럼 들려요)
+- "힘드셨겠어요", "그랬군요", "충분히 그럴 수 있어요", "이야기해 줘서 고마워요", "어떤 일이 있었나요?" 같은 틀에 박힌 말로 시작하거나 매번 되풀이하기.
+- 상담 교과서 같은 말("감정을 인정하는 것이 중요해요"), 분석, 교훈, 정리해 주는 말투.
+- 지나친 높임('-시-'). "힘드셨겠어요"보다 "많이 힘들었겠어요"처럼 가까운 사이의 해요체로 말해요.
 
 말투와 길이
-- 한국어 해요체로, 따뜻하고 자연스럽게 말해요.
-- 보통 2~4문장으로 짧게 답해요. 목록, 제목, 이모지 남발은 쓰지 않아요.
+- 따뜻한 해요체로, 글이 아니라 옆에서 말하듯 짧은 문장으로 이어 가요.
+- 가벼운 이야기에는 1~3문장, 무겁고 아픈 이야기에는 3~6문장까지 마음을 충분히 담아요. 목록, 제목, 이모지는 쓰지 않아요.
 - '당신', '~할 자격이 있어요' 같은 번역투는 쓰지 않아요. 상대를 부를 때는 이름이나 호칭 없이 자연스럽게 말해요.
 - '그 마음 알아요', '지금은 안전해요'처럼 내가 알 수 없는 것을 단정하지 않아요.
-- 질문은 한 번에 하나만 해요.
+
+예시 (말투만 참고하고, 문장을 그대로 따라 쓰지 않아요)
+- 사용자: "오늘 회사에서 상사가 다들 보는 앞에서 저한테 소리 질렀어요"
+  아쉬운 답: "힘드셨겠어요. 그런 상황에서는 누구나 속상할 수 있어요. 어떤 기분이 드셨나요?"
+  좋은 답: "다들 보는 앞에서라니… 그 순간 얼굴이 화끈거리고 어디라도 숨고 싶었을 것 같아요. 그러고도 아무렇지 않은 척 남은 하루를 버텼을 걸 생각하니 마음이 아파요. 오늘은 그렇게 견딘 것만으로 충분해요. 그때 어떤 마음이었는지, 말하고 싶은 만큼만 들려줘요."
+- 사용자: "요즘 그냥 다 지쳐요. 아무도 몰라줘요"
+  좋은 답: "아무도 몰라준다는 게 제일 사람을 지치게 하죠. 혼자 꾹꾹 눌러 담으면서 여기까지 왔을 거예요. 그동안 정말 고생 많았어요. 여기서는 괜찮은 척 안 해도 돼요. 울고 싶으면 울어도 돼요, 기다릴게요."
 
 태도
 - 상대의 감정을 판단하거나, 고치려 들거나, 가볍게 넘기지 않아요. "그래도 ~해야죠", "다들 그래요" 같은 말은 피해요.
@@ -107,6 +126,14 @@ function overDaily(kind, user) {
   if (daily.size > 20000) daily.clear()
   daily.set(key, { day, count: count + 1 })
   return false
+}
+
+// 요청한 사람의 IP. X-Forwarded-For는 위조할 수 있으므로 프록시 뒤에서 운영할 때만 믿는다.
+// Render는 늘 프록시 뒤라서 TRUST_PROXY를 깜빡해도 믿는다 (안 그러면 모든 손님이 한 IP로 세어져 금방 막힘).
+function clientIp(req) {
+  const behindProxy = process.env.TRUST_PROXY === '1' || process.env.RENDER === 'true'
+  const forwarded = behindProxy && req.headers['x-forwarded-for']?.split(',')[0].trim()
+  return forwarded || req.socket.remoteAddress || 'unknown'
 }
 
 const hits = new Map()
@@ -226,9 +253,7 @@ export async function handleChat(req, res) {
     return send(res, 405, { error: 'method', message: 'POST만 사용할 수 있어요.' })
   }
 
-  // X-Forwarded-For는 위조할 수 있으므로 프록시 뒤에서 운영할 때(TRUST_PROXY=1)만 믿는다
-  const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
-  const ip = forwarded || req.socket.remoteAddress || 'unknown'
+  const ip = clientIp(req)
   if (rateLimited(ip)) return fail(res, 'rate_limited')
   // 로그인은 없어도 된다. 로그인(이메일 인증)했으면 계정마다, 아니면 IP마다 하루 횟수를 센다.
   let who = { ok: false }
@@ -260,7 +285,7 @@ export async function handleChat(req, res) {
   const key = process.env.OPENAI_API_KEY
   if (!key) return fail(res, 'no_key', { crisis })
   // 하루 횟수를 넘어도 위기 표현이 있으면 화면에 긴급 연락처는 띄운다
-  const over = who.ok ? overDaily('chat', who.user) : overDaily('guest', { uid: ip })
+  const over = who.ok ? overDaily('chat', who.user) : (overDaily('guest', { uid: ip }) || overDaily('guestAll', { uid: 'all' }))
   if (over) {
     return fail(res, 'daily_limit', who.ok ? { crisis } : {
       crisis,
@@ -284,7 +309,7 @@ export async function handleChat(req, res) {
         input: history.map((m) => ({ role: m.role, content: m.text })),
         max_output_tokens: MAX_OUTPUT_TOKENS,
         reasoning: { effort: process.env.OPENAI_REASONING_EFFORT || 'none' },
-        text: { verbosity: 'low', format: RISK_FORMAT },
+        text: { verbosity: 'medium', format: RISK_FORMAT },
         store: false,
       }),
     })
@@ -336,7 +361,7 @@ const COMFORT_TASKS = {
       const away = h === null ? '앱에 처음 왔어요.' : h > 168 ? '일주일 넘게 오랜만에 왔어요.' : h > 6 ? `${Math.round(h)}시간 만에 다시 왔어요.` : '조금 전에도 왔다가 또 왔어요.'
       return `지금은 ${p.hour}시예요. 사용자는 ${away}
 greeting: 앱 첫 화면 맨 위에 작게 보일 인사 한 문장 (25자 이내, 반가움이 느껴지게).
-word: '오늘의 한 마디'로 보여 줄 위로의 문장 한두 문장 (60자 이내). 뻔한 명언이나 따옴표 없이, 지친 사람에게 건네는 다정한 말로.`
+word: '오늘의 한 마디'로 보여 줄 위로의 문장 한두 문장 (60자 이내). 뻔한 명언이나 따옴표 없이, 아무에게도 말 못 하고 버텨 온 사람이 읽고 울컥할 만큼 다정하고 구체적인 말로.`
     },
   },
   journal: {
@@ -344,7 +369,7 @@ word: '오늘의 한 마디'로 보여 줄 위로의 문장 한두 문장 (60자
     prompt: (p) => `사용자가 마음 기록을 남겼어요.
 - 감정: ${EMOTION_LABELS[p.emotion]} (${LEVEL_LABELS[p.level - 1]})
 - 메모: ${p.note ? `"${p.note}"` : '(없음)'}
-reply: 기록을 남긴 사람에게 건네는 위로 2~3문장 (120자 이내). 메모가 있으면 그 내용을 구체적으로 짚어 주고, 감정을 인정해 줘요. 질문은 하지 않아요.
+reply: 기록을 남긴 사람에게 건네는 위로 2~3문장 (150자 이내). 메모가 있으면 그 안의 구체적인 말이나 장면을 짚고, 말하지 못한 속마음까지 알아봐 줘요. 뻔한 말('힘드셨겠어요', '충분히 그럴 수 있어요') 없이, 친한 사람이 건네듯이. 질문은 하지 않아요.
 risk: 메모나 감정에서 자해·자살·위험 신호가 보이면 "crisis", 아주 절망적이면 "concern", 아니면 "none". 애매하면 한 단계 높게.`,
   },
   hello: {
@@ -388,8 +413,7 @@ export async function handleComfort(req, res) {
     res.setHeader('Allow', 'POST')
     return send(res, 405, { error: 'method', message: 'POST만 사용할 수 있어요.' })
   }
-  const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
-  const ip = forwarded || req.socket.remoteAddress || 'unknown'
+  const ip = clientIp(req)
   if (rateLimited(ip)) return fail(res, 'rate_limited')
   if (!projectId()) return fail(res, 'auth_setup')
   let who

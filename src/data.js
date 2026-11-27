@@ -8,21 +8,21 @@ export const PAGES = [
 
 export const EMOTIONS = [
   { id: 'calm', label: '평온해요', emoji: '🌿', tone: 'blue',
-    comfort: '잔잔한 오늘을 잘 지켜 내고 있네요. 이 편안함을 천천히 느껴 보세요.' },
+    comfort: '잔잔한 오늘을 잘 지켜 냈네요. 이런 날이 오기까지 애쓴 나에게, 오늘은 고맙다고 말해 줘요.' },
   { id: 'happy', label: '기뻐요', emoji: '🌼', tone: 'cream',
-    comfort: '좋은 일이 있었군요. 그 기쁨을 함께 나눌 수 있어 반가워요.' },
+    comfort: '좋은 일이 있었군요. 그 웃음, 그동안 충분히 기다려 온 거예요. 마음껏 기뻐해도 돼요.' },
   { id: 'tired', label: '지쳤어요', emoji: '🌙', tone: 'lavender',
-    comfort: '많이 애썼어요. 오늘은 조금 쉬어 가도 괜찮아요.' },
+    comfort: '얼마나 오래 혼자 버텨 왔을까요. 오늘은 아무것도 증명하지 않아도 돼요. 그냥 쉬어요.' },
   { id: 'sad', label: '슬퍼요', emoji: '💧', tone: 'blue',
-    comfort: '슬픈 마음이 드는 건 자연스러운 일이에요. 혼자 견디지 않아도 돼요.' },
+    comfort: '슬픈 마음을 꾹 참느라 많이 아팠죠. 여기서는 참지 않아도 돼요. 울어도 괜찮아요.' },
   { id: 'anxious', label: '불안해요', emoji: '🍃', tone: 'lavender',
-    comfort: '마음이 조마조마하군요. 숨을 한 번 길게 내쉬고, 지금 여기에 함께 있어요.' },
+    comfort: '마음이 계속 조마조마해서 많이 지쳤겠어요. 지금 이 순간만큼은, 내가 옆에 있을게요.' },
   { id: 'angry', label: '화가 나요', emoji: '🔥', tone: 'cream',
-    comfort: '화가 날 만한 일이 있었나 봐요. 그 마음도 충분히 이해받아도 돼요.' },
+    comfort: '화가 날 만큼 마음이 다쳤던 거예요. 그 마음, 이상한 게 아니에요. 여기선 꺼내 놓아도 돼요.' },
   { id: 'lonely', label: '외로워요', emoji: '☁️', tone: 'lavender',
-    comfort: '외로운 마음이 들 때 이렇게 찾아와 주어서 고마워요. 곁에 있을게요.' },
+    comfort: '아무도 내 마음을 모르는 것 같은 밤이죠. 그래도 이렇게 와 줘서 다행이에요. 곁에 있을게요.' },
   { id: 'empty', label: '잘 모르겠어요', emoji: '🫧', tone: 'blue',
-    comfort: '마음을 정확히 몰라도 괜찮아요. 모르는 채로 머물러도 돼요.' },
+    comfort: '무슨 마음인지 몰라도 괜찮아요. 이름 붙이지 않아도, 그냥 여기 잠시 머물러요.' },
 ]
 
 export const BREATHING = [
