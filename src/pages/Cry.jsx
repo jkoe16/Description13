@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { barColor } from '../theme.js'
+import { makeSound } from '../ambient.js'
 
 // 눈물 쉼터: 어두운 화면, 잔잔한 소리, 곁에 있어 주는 말. 아무것도 저장하지 않는다.
 
@@ -34,128 +35,6 @@ const SOUNDS = [
   { id: 'waves', label: '파도' },
   { id: 'off', label: '조용히' },
 ]
-
-// ---------- 소리: 파일 없이 Web Audio로 만든다 ----------
-function noiseBuffer(ctx, brown) {
-  const len = ctx.sampleRate * 4
-  const buf = ctx.createBuffer(1, len, ctx.sampleRate)
-  const d = buf.getChannelData(0)
-  let last = 0
-  for (let i = 0; i < len; i++) {
-    const w = Math.random() * 2 - 1
-    if (brown) {
-      last = (last + 0.02 * w) / 1.02
-      d[i] = last * 3.5
-    } else {
-      d[i] = w
-    }
-  }
-  return buf
-}
-
-// 잔잔한 음악: 느린 화음(가라앉는 진행) 위에 가끔 피아노 같은 한 음이 떨어진다
-const hz = (m) => 440 * 2 ** ((m - 69) / 12)
-const CHORDS = [
-  [57, 60, 64, 71], // Am(add9)
-  [53, 57, 60, 64], // Fmaj7
-  [48, 55, 60, 64], // C
-  [55, 59, 62, 67], // G
-]
-const MELODY = [69, 72, 74, 76, 79, 81] // 라 단조 5음
-const BAR = 8 // 화음 하나의 길이(초)
-
-function makeMusic(ctx, out) {
-  const bus = ctx.createGain()
-  bus.gain.value = 0.9
-  const lp = ctx.createBiquadFilter()
-  lp.type = 'lowpass'
-  lp.frequency.value = 1800
-  const echo = ctx.createDelay()
-  echo.delayTime.value = 0.42
-  const fb = ctx.createGain()
-  fb.gain.value = 0.32
-  bus.connect(lp)
-  lp.connect(out)
-  lp.connect(echo)
-  echo.connect(fb).connect(echo)
-  echo.connect(out)
-
-  const live = new Set()
-  const tone = (freq, t, type, peak, attack, fadeAt, fadeTau, end) => {
-    const o = ctx.createOscillator()
-    o.type = type
-    o.frequency.value = freq
-    const g = ctx.createGain()
-    g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(peak, t + attack)
-    g.gain.setTargetAtTime(0, fadeAt, fadeTau)
-    o.connect(g).connect(bus)
-    o.start(t)
-    o.stop(end)
-    live.add(o)
-    o.onended = () => { live.delete(o); g.disconnect() }
-  }
-
-  let bar = 0
-  const play = () => {
-    const t = ctx.currentTime + 0.1
-    CHORDS[bar % CHORDS.length].forEach((m, i) =>
-      tone(hz(m), t, 'sine', i === 0 ? 0.07 : 0.045, 2.5, t + BAR - 1.5, 1.2, t + BAR + 5))
-    // 한 마디에 한두 음만, 띄엄띄엄
-    ;[1.5, 4.5, 6.5].forEach((at) => {
-      if (Math.random() < 0.55) {
-        const m = MELODY[Math.floor(Math.random() * MELODY.length)]
-        tone(hz(m), t + at, 'triangle', 0.05, 0.02, t + at + 0.05, 0.9, t + at + 5)
-      }
-    })
-    bar++
-  }
-  play()
-  const timer = setInterval(play, BAR * 1000)
-  return () => {
-    clearInterval(timer)
-    live.forEach((o) => { try { o.stop() } catch { /* 이미 멈춤 */ } })
-    ;[bus, lp, echo, fb].forEach((n) => n.disconnect())
-  }
-}
-
-function makeSound(ctx, id, out) {
-  if (id === 'music') return makeMusic(ctx, out)
-  const src = ctx.createBufferSource()
-  src.loop = true
-  const nodes = [src]
-  if (id === 'rain') {
-    src.buffer = noiseBuffer(ctx, false)
-    const hp = ctx.createBiquadFilter()
-    hp.type = 'highpass'
-    hp.frequency.value = 500
-    const lp = ctx.createBiquadFilter()
-    lp.type = 'lowpass'
-    lp.frequency.value = 4500
-    const g = ctx.createGain()
-    g.gain.value = 0.22
-    src.connect(hp).connect(lp).connect(g).connect(out)
-    nodes.push(hp, lp, g)
-  } else {
-    // 파도: 낮은 소리를 12초 주기로 밀려왔다 빠지게
-    src.buffer = noiseBuffer(ctx, true)
-    const lp = ctx.createBiquadFilter()
-    lp.type = 'lowpass'
-    lp.frequency.value = 700
-    const g = ctx.createGain()
-    g.gain.value = 0.35
-    const lfo = ctx.createOscillator()
-    lfo.frequency.value = 1 / 12
-    const depth = ctx.createGain()
-    depth.gain.value = 0.3
-    lfo.connect(depth).connect(g.gain)
-    lfo.start()
-    src.connect(lp).connect(g).connect(out)
-    nodes.push(lp, g, lfo, depth)
-  }
-  src.start()
-  return () => nodes.forEach((n) => { try { n.stop?.() } catch { /* 이미 멈춤 */ } n.disconnect() })
-}
 
 function useAmbient(sound, volume) {
   const ctxRef = useRef(null)
