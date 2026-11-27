@@ -1,12 +1,12 @@
 import { PAGES } from '../data.js'
-import Icon from './Icon.jsx'
+import Icon, { BrandMark } from './Icon.jsx'
 
 export default function Nav({ page, go }) {
   return (
     <>
       <aside className="sidebar">
         <button className="brand" onClick={() => go('home')}>
-          <span className="brand-mark">곁</span>
+          <BrandMark />
           <span>
             <strong>마음곁</strong>
             <small>마음이 쉬어 가는 곳</small>
@@ -26,7 +26,7 @@ export default function Nav({ page, go }) {
           <Icon name="user" />
           내 계정
         </button>
-        <a className="side-sos" href="tel:109">
+        <a className="side-sos" href="tel:109" aria-label="지금 힘들다면 109, 24시간 자살예방상담에 전화하기">
           <Icon name="phone" size={18} />
           <span>
             <strong>지금 힘들다면 109</strong>
@@ -39,8 +39,8 @@ export default function Nav({ page, go }) {
         {PAGES.map((p) => (
           <button key={p.id} className={'tab' + (page === p.id ? ' active' : '')}
             aria-current={page === p.id ? 'page' : undefined} onClick={() => go(p.id)}>
-            <Icon name={p.icon} size={21} />
-            <span>{p.label}</span>
+            <span className="tab-icon"><Icon name={p.icon} size={21} /></span>
+            <span className="tab-label">{p.label}</span>
           </button>
         ))}
       </nav>

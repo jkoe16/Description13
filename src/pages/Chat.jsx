@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { collection, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { EMOTIONS } from '../data.js'
-import Icon from '../components/Icon.jsx'
+import Icon, { BrandMark } from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
 import { chatHello, moodHello } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
@@ -247,7 +247,7 @@ export default function Chat({ mood, go, active = true }) {
             if (m.from === 'error') {
               return (
                 <div key={m.id} className="bubble-row bot">
-                  <span className="avatar">곁</span>
+                  <BrandMark size={34} />
                   <div className="bubble error" role="alert">
                     {m.text}
                     {m.retry && <button className="btn soft small" onClick={retry}>다시 시도</button>}
@@ -258,14 +258,14 @@ export default function Chat({ mood, go, active = true }) {
             }
             return (
               <div key={m.id} className={'bubble-row ' + m.from}>
-                {m.from === 'bot' && <span className="avatar">곁</span>}
+                {m.from === 'bot' && <BrandMark size={34} />}
                 <div className="bubble">{m.text}</div>
               </div>
             )
           })}
           {typing && (
             <div className="bubble-row bot">
-              <span className="avatar">곁</span>
+              <BrandMark size={34} />
               <div className="bubble typing"><i /><i /><i /></div>
               {slow > 0 && <small className="slow-note" aria-live="polite">{SLOW_NOTES[slow - 1]}</small>}
             </div>

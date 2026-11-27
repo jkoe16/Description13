@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+// 한글 글꼴 Pretendard (OFL). 쓰는 글자 조각만 그때그때 받아서 가볍고, 앱과 함께 저장돼 오프라인에서도 보인다.
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import './styles.css'
 import { startTheme } from './theme.js'
 

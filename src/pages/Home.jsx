@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
-import Icon from '../components/Icon.jsx'
-
-const WORD_MS = 30000 // 오늘의 한 마디가 바뀌는 간격
+import Icon, { MoodIcon } from '../components/Icon.jsx'
 import { EMOTIONS } from '../data.js'
 import { awayHours, nextWord, welcomeLine } from '../comfort.js'
 import { askComfort, cachedHome, saveHome } from '../comfortAI.js'
 import { useUser } from '../firebase.js'
+
+const WORD_MS = 30000 // 오늘의 한 마디가 바뀌는 간격
+
+const QUICK = [
+  { id: 'journal', icon: 'journal', tone: 'lavender', title: '마음 기록', desc: '오늘의 감정을 남겨요' },
+  { id: 'rest', icon: 'rest', tone: 'blue', title: '마음 휴식', desc: '함께 천천히 숨 쉬어요' },
+  { id: 'help', icon: 'help', tone: 'cream', title: '도움받기', desc: '전문 상담 연결 안내' },
+]
 
 function greeting() {
   const h = new Date().getHours()
@@ -56,7 +62,7 @@ export default function Home({ mood, setMood, go }) {
         <h1>{greeting()}.</h1>
         <p className="lead">여기서는 잘하지 않아도 괜찮아요. 지금 마음이 어떤지 살짝 알려 주세요.</p>
         <button className="daily-word" onClick={showNext} title="누르면 다음 말을 보여 줘요">
-          <small>오늘의 한 마디 <span className="word-hint">· 누르면 다음 말</span></small>
+          <small><Icon name="sparkle" size={15} />오늘의 한 마디 <span className="word-hint">· 누르면 다음 말</span></small>
           <p key={'w' + turn} className="ai-swap">{words.word}</p>
         </button>
       </section>
@@ -67,17 +73,17 @@ export default function Home({ mood, setMood, go }) {
           {EMOTIONS.map((e) => (
             <button key={e.id} className={`emotion tone-${e.tone}` + (mood === e.id ? ' selected' : '')}
               aria-pressed={mood === e.id} onClick={() => setMood(mood === e.id ? null : e.id)}>
-              <span className="emoji">{e.emoji}</span>
-              {e.label}
+              <MoodIcon id={e.id} />
+              <span className="emotion-label">{e.label}</span>
             </button>
           ))}
         </div>
 
-        <div className={'comfort' + (picked ? ' show' : '')} aria-live="polite">
+        <div className={'comfort' + (picked ? ` show tone-${picked.tone}` : '')} aria-live="polite">
           {picked ? (
             <>
-              <span className="emoji">{picked.emoji}</span>
-              <p>{picked.comfort}</p>
+              <MoodIcon id={picked.id} />
+              <p key={picked.id} className="ai-swap">{picked.comfort}</p>
             </>
           ) : (
             <p className="muted">마음을 고르면 작은 위로의 말을 건넬게요.</p>
@@ -91,26 +97,25 @@ export default function Home({ mood, setMood, go }) {
 
       <button className="cry-entry card" onClick={() => go('cry')}>
         <span className="cry-entry-dot" aria-hidden="true" />
-        <span>
+        <span className="cry-entry-text">
           <strong>눈물 쉼터</strong>
           <small>울고 싶을 때, 불을 낮추고 잔잔한 음악 곁에서 마음껏 울어도 괜찮아요</small>
         </span>
+        <Icon name="chevron" size={20} className="chev" />
       </button>
 
-      <section className="quick-grid">
-        <button className="quick card tone-lavender" onClick={() => go('journal')}>
-          <strong>마음 기록</strong>
-          <span>오늘의 감정을 남겨요</span>
-        </button>
-        <button className="quick card tone-blue" onClick={() => go('rest')}>
-          <strong>마음 휴식</strong>
-          <span>함께 천천히 숨 쉬어요</span>
-        </button>
-        <button className="quick card tone-cream" onClick={() => go('help')}>
-          <strong>도움받기</strong>
-          <span>전문 상담 연결 안내</span>
-        </button>
-      </section>
+      <nav className="quick-grid" aria-label="바로 가기">
+        {QUICK.map((q) => (
+          <button key={q.id} className={`quick card tone-${q.tone}`} onClick={() => go(q.id)}>
+            <span className="quick-icon"><Icon name={q.icon} size={22} /></span>
+            <span className="quick-text">
+              <strong>{q.title}</strong>
+              <span>{q.desc}</span>
+            </span>
+            <Icon name="chevron" size={18} className="chev" />
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

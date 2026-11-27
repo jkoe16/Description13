@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { EMOTIONS } from '../data.js'
+import Icon from './Icon.jsx'
 
 // 마음 기록 돌아보기: 최근 7일·30일 동안 어떤 마음이 많았는지 조용히 보여 준다.
 // 감정은 이모지와 이름으로 구분하고(색만으로 구분하지 않음), 막대는 한 가지 색으로 개수만 보여 준다.
@@ -73,7 +74,7 @@ export default function JournalReview({ entries, partial }) {
               const text = `${dayLabel.format(date)}: ${e ? e.label : '기록 없음'}`
               return (
                 <li key={date.getTime()} className={e ? `has tone-${e.tone}` : 'none'} title={text} aria-label={text}>
-                  <span className="emoji" aria-hidden="true">{e ? e.emoji : ''}</span>
+                  {e && <Icon name={'mood-' + e.id} size={days > 7 ? 14 : 20} className="day-icon" />}
                   {days === 7 && <small aria-hidden="true">{weekday.format(date)}</small>}
                 </li>
               )
@@ -83,7 +84,7 @@ export default function JournalReview({ entries, partial }) {
           <ul className="mood-bars" aria-label="마음별 기록 수">
             {r.counts.map((c) => (
               <li key={c.id} title={`${c.label} ${c.count}번`}>
-                <span className="mood-name"><span aria-hidden="true">{c.emoji}</span> {c.label}</span>
+                <span className="mood-name"><span className={`mood-dot tone-${c.tone}`}><Icon name={'mood-' + c.id} size={15} /></span>{c.label}</span>
                 <span className="bar-track" aria-hidden="true"><span className="bar" style={{ width: `${(c.count / max) * 100}%` }} /></span>
                 <span className="bar-count">{c.count}번</span>
               </li>

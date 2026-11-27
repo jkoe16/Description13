@@ -7,6 +7,7 @@ import { db, useUser } from '../firebase.js'
 import { journalReply } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
 import JournalReview from '../components/JournalReview.jsx'
+import Icon, { MoodIcon } from '../components/Icon.jsx'
 
 const LEVELS = ['아주 약하게', '조금', '보통', '꽤', '아주 강하게']
 const fmt = new Intl.DateTimeFormat('ko-KR', {
@@ -113,8 +114,8 @@ export default function Journal({ go }) {
             {EMOTIONS.map((e) => (
               <button key={e.id} className={`emotion tone-${e.tone}` + (emotion === e.id ? ' selected' : '')}
                 aria-pressed={emotion === e.id} onClick={() => { setEmotion(e.id); setReply(null) }}>
-                <span className="emoji">{e.emoji}</span>
-                {e.label}
+                <MoodIcon id={e.id} />
+                <span className="emotion-label">{e.label}</span>
               </button>
             ))}
           </div>
@@ -170,7 +171,7 @@ export default function Journal({ go }) {
             <p className="muted journal-loading">기록을 불러오고 있어요…</p>
           ) : entries.length === 0 ? (
             <div className="empty">
-              <span className="emoji">📖</span>
+              <span className="empty-icon"><Icon name="book" size={28} /></span>
               <p>아직 남긴 기록이 없어요.<br />첫 마음을 기록해 보세요.</p>
             </div>
           ) : (
@@ -186,7 +187,7 @@ export default function Journal({ go }) {
                             <button key={x.id} role="radio" aria-checked={editing.emotion === x.id}
                               className={`emotion tone-${x.tone}` + (editing.emotion === x.id ? ' selected' : '')}
                               onClick={() => setEditing({ ...editing, emotion: x.id })}>
-                              <span className="emoji">{x.emoji}</span>{x.label}
+                              <MoodIcon id={x.id} size={18} /><span className="emotion-label">{x.label}</span>
                             </button>
                           ))}
                         </div>
@@ -211,7 +212,7 @@ export default function Journal({ go }) {
                 }
                 return (
                   <li key={en.id} className={`entry tone-${e.tone}`}>
-                    <span className="emoji">{e.emoji}</span>
+                    <MoodIcon id={e.id} />
                     <div>
                       <strong>{e.label} · {LEVELS[en.level - 1]}</strong>
                       <small>{fmt.format(en.at)}</small>
