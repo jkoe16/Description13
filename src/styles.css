@@ -456,6 +456,11 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 
 /* ---------- 로그인 ---------- */
 .head-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 860px) {
+  /* 휴대폰: 대화 화면 위 버튼들이 두 줄로 넘어가 대화 칸을 줄이지 않게 작게, 한 줄로 */
+  .head-actions { gap: 6px; justify-content: flex-start; }
+  .head-actions .pill { padding: 6px 11px; font-size: 0.8rem; }
+}
 .head-actions .pill:not(.sos) { background: var(--lavender-soft); color: var(--lavender-deep); }
 .side-account { margin-top: 8px; }
 .login-prompt { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -623,7 +628,9 @@ body::before {
 .daily-word {
   margin-top: 22px; padding: 16px 18px; border-radius: var(--radius-sm);
   background: var(--glass); border: 1px solid var(--line); display: grid; gap: 6px;
+  width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
 }
+.daily-word p { min-height: 3.3em; } /* 길이가 다른 말로 바뀌어도 카드가 덜 출렁이게 */
 .daily-word small { color: var(--lavender-deep); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
 .daily-word p { font-size: 1.02rem; line-height: 1.65; }
 .journal-reply {
