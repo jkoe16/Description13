@@ -4,6 +4,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/journal/{entryId} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
+      // 고치기: 감정·크기·메모만 바꿀 수 있고, 남긴 시간(at)은 그대로여야 한다
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['emotion', 'level', 'note', 'at'])
+        && request.resource.data.emotion is string && request.resource.data.emotion.size() <= 20
+        && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 5
+        && request.resource.data.note is string && request.resource.data.note.size() <= 300
+        && request.resource.data.at == resource.data.at;
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['emotion', 'level', 'note', 'at'])
         && request.resource.data.emotion is string && request.resource.data.emotion.size() <= 20
