@@ -87,7 +87,7 @@ export default function Home({ mood, setMood, go }) {
         <span className="cry-entry-dot" aria-hidden="true" />
         <span>
           <strong>눈물 쉼터</strong>
-          <small>울고 싶을 때, 불을 낮추고 잔잔한 소리 곁에서 마음껏 울어도 괜찮아요</small>
+          <small>울고 싶을 때, 불을 낮추고 잔잔한 음악 곁에서 마음껏 울어도 괜찮아요</small>
         </span>
       </button>
 

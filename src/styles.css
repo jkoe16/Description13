@@ -533,7 +533,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .cry-glow {
   width: 180px; height: 180px; border-radius: 50%;
   background: radial-gradient(circle, rgba(217, 207, 252, 0.85) 0%, rgba(157, 141, 224, 0.35) 45%, transparent 70%);
-  animation: cry-breathe 8s ease-in-out infinite;
+  animation: cry-breathe 10s ease-in-out infinite;
 }
 @keyframes cry-breathe { 0%, 100% { transform: scale(0.82); opacity: 0.7; } 50% { transform: scale(1.08); opacity: 1; } }
 .cry-word { font-size: 1.35rem; line-height: 1.7; font-weight: 500; min-height: 3.4em; animation: cry-fade 1.6s ease; }
@@ -541,7 +541,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .cry-time { color: #8f88b3; font-size: 0.82rem; }
 .cry-controls { display: grid; gap: 16px; justify-items: center; width: 100%; margin-top: 8px; }
 .cry-sounds { display: flex; gap: 6px; padding: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
-.cry-sounds button { padding: 9px 16px; border-radius: 999px; color: #bdb5e0; font-size: 0.9rem; }
+.cry-sounds button { white-space: nowrap; padding: 9px 16px; border-radius: 999px; color: #bdb5e0; font-size: 0.9rem; }
 .cry-sounds button.on { background: rgba(217, 207, 252, 0.2); color: #fff; font-weight: 600; }
 .cry-volume { display: flex; align-items: center; gap: 10px; color: #8f88b3; font-size: 0.82rem; }
 .cry-volume input { width: 160px; accent-color: #b9a8e6; }
@@ -552,6 +552,16 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .cry-done:hover, .cry-choices button:hover { background: rgba(217, 207, 252, 0.26); }
 .cry-choices { display: grid; gap: 10px; width: 100%; max-width: 320px; }
 .cry-tip { color: #bdb5e0; font-size: 0.95rem; }
+.cry-pour { display: grid; gap: 10px; width: 100%; max-width: 420px; transition: opacity 2.6s ease, transform 2.6s ease, filter 2.6s ease; }
+.cry-pour textarea {
+  width: 100%; resize: vertical; padding: 14px 16px; border-radius: 18px; font: inherit; line-height: 1.6;
+  background: rgba(255, 255, 255, 0.06); color: #f1eeff; border: 1px solid rgba(217, 207, 252, 0.22);
+}
+.cry-pour textarea::placeholder { color: #8f88b3; }
+.cry-pour textarea:focus { outline: none; border-color: rgba(217, 207, 252, 0.5); }
+.cry-pour-row { display: flex; justify-content: center; gap: 10px; }
+.cry-pour.letting { opacity: 0; transform: translateY(-40px) scale(0.96); filter: blur(6px); }
+.cry-done:disabled { opacity: 0.5; }
 .cry-sos { color: #f3c9a9; font-size: 0.9rem; line-height: 1.6; }
 .cry-sos a { color: #ffd9bd; font-weight: 700; }
 .slow-note { align-self: center; color: var(--ink-soft); font-size: 0.8rem; }
