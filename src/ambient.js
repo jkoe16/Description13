@@ -1,8 +1,9 @@
 // 눈물 쉼터의 소리.
-// 빗소리·파도는 진짜 녹음을 쓰고, 받지 못했을 때만 Web Audio로 직접 만든 소리로 대신한다.
-// 음악은 파일 없이 Web Audio로 그때그때 만든다.
+// 빗소리·파도·음악은 진짜 녹음을 쓰고, 받지 못했을 때만 Web Audio로 직접 만든 소리로 대신한다.
+// 음악은 마음곁을 위해 지은 느린 피아노곡을 Salamander Grand Piano 샘플로 녹음한 것이다.
 import rainUrl from './sounds/rain.mp3'
 import wavesUrl from './sounds/waves.mp3'
+import musicUrl from './sounds/music.mp3'
 
 const rand = (a, b) => a + Math.random() * (b - a)
 
@@ -268,16 +269,17 @@ function makeMusic(ctx, out) {
 
 // ---------- 진짜로 녹음한 빗소리·파도 ----------
 // 출처(CC BY): 빗소리 alex36917, 파도 Luftrum (freesound.org, Blanket 앱의 편집본). 정책 화면에 표시한다.
-const RECORDINGS = { rain: rainUrl, waves: wavesUrl }
-const SOFTEN = { rain: 5200, waves: 6000 } // 높은 소리를 살짝 깎아 귀에 부드럽게
-const LEVEL = { rain: 2, waves: 1.6 }
-const FADE = 4 // 끝과 처음을 4초 동안 겹쳐 이어서, 반복되는 이음매가 들리지 않게
+const RECORDINGS = { rain: rainUrl, waves: wavesUrl, music: musicUrl }
+const SOFTEN = { rain: 5200, waves: 6000, music: 9000 } // 높은 소리를 살짝 깎아 귀에 부드럽게
+const LEVEL = { rain: 2, waves: 1.6, music: 1.4 }
+// 끝과 처음을 겹쳐 이어서, 반복되는 이음매가 들리지 않게. 음악은 파일에서 이미 이어 두어 아주 짧게만 겹친다.
+const FADE = { rain: 4, waves: 4, music: 0.3 }
 const decoded = new Map() // 같은 화면에서 다시 고르면 다시 받지 않는다
 
 // 녹음의 끝부분을 처음 4초에 겹쳐 섞은 새 소리를 만든다. 이걸 반복하면 이음매가 없다.
 // (타이머 없이 반복되므로 화면이 잠깐 꺼지거나 다른 앱을 봐도 끊기지 않는다)
-function seamless(ctx, buf) {
-  const f = Math.floor(FADE * buf.sampleRate)
+function seamless(ctx, buf, fade) {
+  const f = Math.floor(fade * buf.sampleRate)
   const n = buf.length
   if (n < f * 3) return buf
   const out = ctx.createBuffer(buf.numberOfChannels, n - f, buf.sampleRate)
@@ -299,7 +301,7 @@ function loadRecording(ctx, id) {
     const promise = fetch(RECORDINGS[id])
       .then((r) => { if (!r.ok) throw new Error('load'); return r.arrayBuffer() })
       .then((b) => new Promise((ok, fail) => ctx.decodeAudioData(b, ok, fail)))
-      .then((buf) => seamless(ctx, buf))
+      .then((buf) => seamless(ctx, buf, FADE[id]))
     decoded.set(key, { ctx, promise })
   }
   return decoded.get(key).promise
@@ -335,7 +337,7 @@ function makeRecording(ctx, id, out, onState) {
     // 받지 못하면(인터넷이 끊겼을 때 등) 직접 만든 소리로 대신한다
     if (stopped) return
     onState?.('ready')
-    fallback = id === 'rain' ? makeRain(ctx, out) : makeWaves(ctx, out)
+    fallback = (id === 'rain' ? makeRain : id === 'waves' ? makeWaves : makeMusic)(ctx, out)
   })
 
   return () => {
@@ -348,6 +350,5 @@ function makeRecording(ctx, id, out, onState) {
 }
 
 export function makeSound(ctx, id, out, onState) {
-  if (id === 'music') return makeMusic(ctx, out)
   return makeRecording(ctx, id, out, onState)
 }
