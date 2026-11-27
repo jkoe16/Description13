@@ -6,12 +6,18 @@ import { createServer } from 'node:http'
 
 const asked = [] // 가짜 AI가 받은 요청
 let fakeReply = { reply: '에고, 많이 지쳤구나.', risk: 'none' }
+let fakeStatus = 200
+let fakeError = null
 const fakeAI = createServer((req, res) => {
   let body = ''
   req.on('data', (c) => { body += c })
   req.on('end', () => {
     asked.push(JSON.parse(body))
     res.setHeader('Content-Type', 'application/json')
+    if (fakeStatus !== 200) {
+      res.statusCode = fakeStatus
+      return res.end(JSON.stringify(fakeError))
+    }
     res.end(JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(fakeReply) }] }] }))
   })
 })
@@ -115,6 +121,18 @@ describe('마음 대화', () => {
     assert.equal(over.body.error, 'daily_limit')
     assert.equal(over.body.crisis, true)
     assert.match(over.body.message, /로그인/)
+  })
+})
+
+describe('OpenAI 하루 한도', () => {
+  test('무료 등급의 하루 요청 수를 다 쓰면 내일 다시 오라고 알리고, 위기면 긴급 카드는 띄운다', async () => {
+    fakeStatus = 429
+    fakeError = { error: { type: 'requests', code: 'rate_limit_exceeded', message: 'Rate limit reached for gpt-6-luna on requests per day (RPD): Limit 50, Used 50.' } }
+    const r = await chat(say('죽고 싶어'))
+    fakeStatus = 200
+    assert.equal(r.body.error, 'ai_daily')
+    assert.match(r.body.message, /내일/)
+    assert.equal(r.body.crisis, true)
   })
 })
 

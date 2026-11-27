@@ -170,7 +170,7 @@ export default function Chat({ mood, go, active = true }) {
       if (data.crisis) added.push({ id: nextId++, from: 'crisis' })
       added.push(r.ok && data.reply
         ? { id: nextId++, from: 'bot', text: data.reply }
-        : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needLogin: AUTH_ERRORS.includes(data.error), retry: !['too_long', 'no_key', 'daily_limit', ...AUTH_ERRORS].includes(data.error) })
+        : { id: nextId++, from: 'error', text: data.message || '답변을 받지 못했어요. 다시 시도해 주세요.', needLogin: AUTH_ERRORS.includes(data.error), retry: !['too_long', 'no_key', 'daily_limit', 'ai_daily', ...AUTH_ERRORS].includes(data.error) })
     } catch (e) {
       if (e.name === 'AbortError') return clearSlow()
       added.push({ id: nextId++, from: 'error', text: '인터넷 연결을 확인하고 다시 시도해 주세요.', retry: true })

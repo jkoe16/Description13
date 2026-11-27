@@ -235,6 +235,7 @@ const ERRORS = {
   auth: [502, 'AI 서비스 인증에 문제가 있어요. 관리자에게 알려 주세요.'],
   quota: [502, 'AI 서비스 사용 한도를 넘었어요. 잠시 뒤에 다시 시도해 주세요.'],
   busy: [503, 'AI가 지금 많이 바빠요. 잠시 뒤에 다시 시도해 주세요.'],
+  ai_daily: [503, '오늘 AI가 답할 수 있는 횟수를 모두 써서, 내일 다시 이야기할 수 있어요. 지금 많이 힘들다면 109(24시간)에 전화해 주세요.'],
   timeout: [504, '답변이 늦어지고 있어요. 다시 시도해 주세요.'],
   upstream: [502, '답변을 받지 못했어요. 다시 시도해 주세요.'],
 }
@@ -345,7 +346,9 @@ export async function handleChat(req, res) {
       // 대화 내용은 기록하지 않고 상태와 오류 종류만 남긴다
       console.error(`[chat] OpenAI ${r.status} ${type}`)
       if (r.status === 401 || r.status === 403) return fail(res, 'auth', { crisis })
-      if (r.status === 429) return fail(res, /quota|credit|spend|usage/.test(type) ? 'quota' : 'busy', { crisis })
+      // 무료 등급은 하루 요청 수(RPD)가 정해져 있다. 그 한도에 닿으면 '잠시 뒤'가 아니라 '내일'이라고 알린다.
+      const perDay = /per day|RPD/i.test(err?.error?.message || '')
+      if (r.status === 429) return fail(res, /quota|credit|spend|usage/.test(type) ? 'quota' : perDay ? 'ai_daily' : 'busy', { crisis })
       if (r.status >= 500) return fail(res, 'busy', { crisis })
       return fail(res, 'upstream', { crisis })
     }
