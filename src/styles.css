@@ -64,7 +64,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   padding: 40px clamp(20px, 4vw, 56px) 56px;
   animation: softIn 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-.page { max-width: 1040px; margin: 0 auto; display: grid; gap: 22px; }
+.page { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .page-head p { margin-top: 6px; }
 
@@ -426,7 +426,7 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 /* ---------- 모바일 ---------- */
 @media (max-width: 860px) {
   .sidebar { display: none; }
-  .main { margin-left: 0; padding: 24px 16px calc(var(--tab-h) + 28px + env(safe-area-inset-bottom)); }
+  .main { margin-left: 0; padding: calc(20px + env(safe-area-inset-top)) 16px calc(var(--tab-h) + 28px + env(safe-area-inset-bottom)); }
   .tabbar {
     display: grid; grid-template-columns: repeat(5, 1fr);
     position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
@@ -444,12 +444,16 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
   .quick-grid { grid-template-columns: 1fr; gap: 10px; }
   .chat { height: calc(100dvh - 360px); min-height: 360px; }
   .sos-grid { grid-template-columns: 1fr; }
-  .sos-card { grid-template-columns: auto 1fr auto; align-items: center; column-gap: 14px; padding: 16px; }
+  .sos-card { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; row-gap: 4px; padding: 16px; }
   .sos-number { grid-row: span 2; font-size: 1.9rem; }
   .sos-card small { min-height: 0; }
-  .sos-card .btn { grid-row: 1 / span 2; grid-column: 3; margin: 0; padding: 10px 14px; }
+  /* 휴대폰에서는 전화하기 버튼을 아래에 넓게 둬서 설명이 좁아지지 않고, 누르기도 쉽게 */
+  .sos-card .btn { grid-column: 1 / -1; justify-content: center; margin-top: 8px; padding: 12px 14px; }
   .agency-list li { grid-template-columns: 1fr auto; }
   .agency-actions { grid-column: 1 / -1; }
+  /* 아이폰은 글자가 16px보다 작은 입력칸을 누르면 화면을 확대해 버려서, 휴대폰에서는 16px로 맞춘다 */
+  .composer textarea, .field, .auth-form input { font-size: 16px; }
+  .page-head { flex-wrap: wrap; }
 }
 
 @media (max-width: 380px) {
