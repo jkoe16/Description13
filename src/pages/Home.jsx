@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const WORD_MS = 12000 // 오늘의 한 마디가 바뀌는 간격
+const WORD_MS = 30000 // 오늘의 한 마디가 바뀌는 간격
 import { EMOTIONS } from '../data.js'
 import { awayHours, nextWord, welcomeLine } from '../comfort.js'
 import { askComfort, cachedHome, saveHome } from '../comfortAI.js'
