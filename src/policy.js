@@ -96,6 +96,7 @@ export const TERMS = () => [
     '눈물 쉼터의 빗소리와 파도 소리는 아래 녹음을 Blanket 앱(Porrumentzio 편집)에서 가져와 크기를 맞춰 씁니다. 두 녹음 모두 CC BY 라이선스예요.',
     '• 빗소리: alex36917, freesound.org/s/524605',
     '• 파도: Luftrum, freesound.org/s/48412',
+    '• 음악: 마음곁을 위해 지은 피아노곡이에요. 피아노 소리는 Alexander Holm의 Salamander Grand Piano(CC BY 3.0)를 썼어요.',
   ]],
   ['9. 문의', [
     `궁금한 점이나 불편한 점은 ${mail()}로 보내 주세요.`,

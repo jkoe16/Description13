@@ -87,6 +87,22 @@ function useAmbient(sound, volume, setLoading) {
     if (master.current && sound !== 'off') master.current.gain.setTargetAtTime(volume, ctxRef.current.currentTime, 0.2)
   }, [volume, sound])
 
+  // 다른 앱으로 가거나 화면을 끄면 소리를 멈추고, 다시 돌아오면 이어서 들려준다
+  useEffect(() => {
+    const onVis = () => {
+      const ctx = ctxRef.current
+      if (!ctx) return
+      if (document.visibilityState === 'hidden') ctx.suspend().catch(() => {})
+      else if (sound !== 'off') ctx.resume().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('pagehide', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('pagehide', onVis)
+    }
+  }, [sound])
+
   // 쉼터를 나가면 소리를 완전히 끈다
   useEffect(() => () => {
     stop.current?.()

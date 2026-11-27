@@ -36,8 +36,8 @@ src/
   comfort.js       미리 써 둔 다정한 말 (AI가 실패하면 이걸 씀)
   comfortAI.js     /api/comfort 호출, 홈 AI 문장 하루 캐시
   memory.js        AI가 나를 기억하기: 대화 요약 저장, 지난 요약·최근 감정 불러오기
-  ambient.js       눈물 쉼터 소리: 녹음한 빗소리·파도(이음매 없이 겹쳐 반복), 음악(Web Audio로 만듦)
-  sounds/          빗소리(alex36917)·파도(Luftrum) 녹음, CC BY, Blanket 앱 편집본. 출처는 이용약관 8번에 표시
+  ambient.js       눈물 쉼터 소리: 녹음한 빗소리·파도·음악(이음매 없이 반복). 못 받으면 Web Audio로 만든 소리로 대신
+  sounds/          빗소리(alex36917)·파도(Luftrum) CC BY(Blanket 앱 편집본), 음악은 직접 지은 곡을 Salamander Grand Piano(CC BY 3.0)로 녹음. 출처는 이용약관 8번
   pages/, components/
 public/
   sw.js            서비스 워커: 화면을 저장해 두고 바로 열기, 뒤에서 갱신, /api는 캐시 안 함
