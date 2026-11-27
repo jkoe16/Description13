@@ -56,9 +56,9 @@ Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`, `users/{
 | `OPENAI_API_KEY` | AI 답장 (필수) |
 | `OPENAI_MODEL` | 선택, 기본 `gpt-6-luna` |
 | `ALLOWED_EMAILS` | 하루 횟수 제한 없이 쓸 이메일 (쉼표로 구분, 예: 계정 주인). 다른 사람도 로그인(이메일 인증)하면 모두 쓸 수 있음 |
-| `DAILY_GUEST_LIMIT`, `DAILY_CHAT_LIMIT`, `DAILY_COMFORT_LIMIT` | 선택, 하루 횟수: 로그인 안 한 사람 대화(IP마다, 기본 30), 로그인한 사람 대화(기본 60)·다정한 말(기본 40) |
+| `DAILY_GUEST_LIMIT`, `DAILY_GUEST_TOTAL`, `DAILY_CHAT_LIMIT`, `DAILY_COMFORT_LIMIT` | 선택, 하루 횟수: 로그인 안 한 사람 대화(IP마다 기본 30, 모두 합쳐 기본 400), 로그인한 사람 대화(기본 60)·다정한 말(기본 40) |
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Firebase 웹 설정 (빌드 때 화면에 들어감) |
-| `TRUST_PROXY` | Render에서는 `1` |
+| `TRUST_PROXY` | 프록시 뒤에서 운영할 때 `1` (Render에서는 따로 안 넣어도 자동으로 켜짐) |
 
 ## 실행
 

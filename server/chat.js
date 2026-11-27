@@ -16,6 +16,7 @@ const RATE_MAX = 12 // IP당 1분에 허용하는 요청 수
 const DAILY = {
   chat: () => Number(process.env.DAILY_CHAT_LIMIT) || 60, // 마음 대화 메시지 (로그인한 사람)
   guest: () => Number(process.env.DAILY_GUEST_LIMIT) || 30, // 마음 대화 메시지 (로그인하지 않은 사람, IP마다)
+  guestAll: () => Number(process.env.DAILY_GUEST_TOTAL) || 400, // 로그인하지 않은 사람 전체를 합친 하루 메시지 (IP를 바꿔 가며 쓰는 것 막기)
   comfort: () => Number(process.env.DAILY_COMFORT_LIMIT) || 40, // 다정한 말·대화 요약
 }
 
@@ -107,6 +108,14 @@ function overDaily(kind, user) {
   if (daily.size > 20000) daily.clear()
   daily.set(key, { day, count: count + 1 })
   return false
+}
+
+// 요청한 사람의 IP. X-Forwarded-For는 위조할 수 있으므로 프록시 뒤에서 운영할 때만 믿는다.
+// Render는 늘 프록시 뒤라서 TRUST_PROXY를 깜빡해도 믿는다 (안 그러면 모든 손님이 한 IP로 세어져 금방 막힘).
+function clientIp(req) {
+  const behindProxy = process.env.TRUST_PROXY === '1' || process.env.RENDER === 'true'
+  const forwarded = behindProxy && req.headers['x-forwarded-for']?.split(',')[0].trim()
+  return forwarded || req.socket.remoteAddress || 'unknown'
 }
 
 const hits = new Map()
@@ -226,9 +235,7 @@ export async function handleChat(req, res) {
     return send(res, 405, { error: 'method', message: 'POST만 사용할 수 있어요.' })
   }
 
-  // X-Forwarded-For는 위조할 수 있으므로 프록시 뒤에서 운영할 때(TRUST_PROXY=1)만 믿는다
-  const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
-  const ip = forwarded || req.socket.remoteAddress || 'unknown'
+  const ip = clientIp(req)
   if (rateLimited(ip)) return fail(res, 'rate_limited')
   // 로그인은 없어도 된다. 로그인(이메일 인증)했으면 계정마다, 아니면 IP마다 하루 횟수를 센다.
   let who = { ok: false }
@@ -260,7 +267,7 @@ export async function handleChat(req, res) {
   const key = process.env.OPENAI_API_KEY
   if (!key) return fail(res, 'no_key', { crisis })
   // 하루 횟수를 넘어도 위기 표현이 있으면 화면에 긴급 연락처는 띄운다
-  const over = who.ok ? overDaily('chat', who.user) : overDaily('guest', { uid: ip })
+  const over = who.ok ? overDaily('chat', who.user) : (overDaily('guest', { uid: ip }) || overDaily('guestAll', { uid: 'all' }))
   if (over) {
     return fail(res, 'daily_limit', who.ok ? { crisis } : {
       crisis,
@@ -388,8 +395,7 @@ export async function handleComfort(req, res) {
     res.setHeader('Allow', 'POST')
     return send(res, 405, { error: 'method', message: 'POST만 사용할 수 있어요.' })
   }
-  const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
-  const ip = forwarded || req.socket.remoteAddress || 'unknown'
+  const ip = clientIp(req)
   if (rateLimited(ip)) return fail(res, 'rate_limited')
   if (!projectId()) return fail(res, 'auth_setup')
   let who
