@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from '../components/Icon.jsx'
 
 const WORD_MS = 30000 // 오늘의 한 마디가 바뀌는 간격
 import { EMOTIONS } from '../data.js'
@@ -46,6 +47,11 @@ export default function Home({ mood, setMood, go }) {
   return (
     <div className="page home">
       <section className="hero card">
+        {/* 휴대폰에서는 아래 메뉴에 '내 계정'이 없어서, 홈 오른쪽 위에 둔다 */}
+        <button className="pill home-account" onClick={() => go('account')}>
+          <Icon name="user" size={16} />
+          {user ? '내 계정' : '로그인'}
+        </button>
         <p className="eyebrow" key={'g' + words.ai}>{words.greeting}</p>
         <h1>{greeting()}.</h1>
         <p className="lead">여기서는 잘하지 않아도 괜찮아요. 지금 마음이 어떤지 살짝 알려 주세요.</p>
