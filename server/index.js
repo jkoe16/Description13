@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT) || 3000
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json',
-  '.webmanifest': 'application/manifest+json',
+  '.webmanifest': 'application/manifest+json', '.mp3': 'audio/mpeg',
 }
 
 createServer(async (req, res) => {

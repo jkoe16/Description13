@@ -7,27 +7,30 @@ import { makeSound } from '../ambient.js'
 // 처음엔 울어도 된다고 허락하고, 참아 온 마음을 알아주고, 곁에 있다고 말하는 순서로 천천히 흐른다.
 export const WORDS = [
   '괜찮아. 여기선 울어도 돼.',
-  '아무도 안 봐. 지금은 나만 여기 있어.',
-  '이유는 말 안 해도 돼. 그냥 울어.',
-  '오늘 하루, 많이 참았지.',
-  '괜찮다고 웃었던 날들, 사실은 하나도 안 괜찮았잖아.',
-  '아무렇지 않은 척 하루를 버티는 거, 그게 얼마나 힘든 일인데.',
-  '누구한테도 말 못 하고, 혼자 꿀꺽 삼킨 말이 많았지.',
-  '힘들다고 하면 짐이 될까 봐, 꾹 참아 왔던 거지.',
-  '잘하고 싶었는데 마음처럼 안 돼서, 많이 속상했지.',
-  '너 정말 열심히 살았어. 누가 몰라줘도, 그건 진짜야.',
-  '약해서 우는 게 아니야. 너무 오래 강했던 거야.',
-  '눈물은 마음이 꽉 차서 넘치는 거래. 넘치게 둬도 돼.',
-  '그동안 많이 외로웠지. 이제 혼자 울지 않아도 돼.',
-  '소리 내서 울어도 괜찮아. 참지 마.',
-  '울고 싶은 만큼 울어. 아무도 재촉 안 해.',
-  '나 아무 데도 안 가. 여기 그대로 있을게.',
-  '숨이 차면 천천히 한 번 내쉬어 봐. 그리고 또 울어도 돼.',
-  '여기까지 버텨 줘서, 정말 고마워.',
-  '너는 네 생각보다 훨씬 소중한 사람이야.',
-  '오늘 다 못 울어도 괜찮아. 언제든 또 와.',
+  '숨 한 번 크게 쉬어 봐. 이제 아무도 안 봐.',
+  '오늘 하루, 괜찮은 척하느라 정말 고생 많았어.',
+  '"괜찮아?" 오늘 누가 물어봐 줬어? 내가 물어볼게. 정말 괜찮아?',
+  '안 괜찮아도 돼. 그 말 하고 싶어서 여기 온 거잖아.',
+  '다들 너한테 기대기만 하고, 정작 너는 기댈 데가 없었지.',
+  '힘들다고 하면 짐이 될까 봐, 혼자 꾹꾹 삼켰지.',
+  '웃으면서 "난 괜찮아" 했던 날들… 사실 하나도 안 괜찮았잖아.',
+  '열심히 했는데 아무도 몰라줘서, 많이 서러웠지.',
+  '그 서러움, 오늘은 여기 다 내려놓고 가.',
+  '울어도 아무것도 무너지지 않아. 조금 가벼워질 뿐이야.',
+  '약해서 우는 게 아니야. 너무 오래 혼자 강했던 거야.',
+  '참지 마. 소리 내서 울어도 괜찮아.',
+  '어린 시절의 너한테도 말해 주고 싶어. 넌 잘못한 거 하나도 없었어.',
+  '누가 뭐래도, 넌 사랑받아도 되는 사람이야.',
+  '오늘까지 버텨 준 거, 그거 정말 대단한 거야.',
+  '나 여기 있어. 다 울 때까지 아무 데도 안 가.',
+  '숨이 차면 천천히… 들이쉬고, 내쉬고. 그리고 또 울어도 돼.',
+  '넌 네가 생각하는 것보다 훨씬 소중해.',
+  '아무도 몰라줘도, 오늘 애쓴 너를 내가 꼭 안아 줄게.',
+  '고생했어. 정말, 정말 고생했어.',
+  '다 울고 나면 따뜻한 물 한 잔 마시자. 그리고 오늘은 푹 자.',
+  '오늘 다 못 울어도 괜찮아. 언제든 또 와. 여기 있을게.',
 ]
-const WORD_MS = 10000
+const WORD_MS = 12000 // 한 문장을 천천히 읽고 머금을 수 있게
 
 const SOUNDS = [
   { id: 'music', label: '음악' },
@@ -36,13 +39,14 @@ const SOUNDS = [
   { id: 'off', label: '조용히' },
 ]
 
-function useAmbient(sound, volume) {
+function useAmbient(sound, volume, setLoading) {
   const ctxRef = useRef(null)
   const master = useRef(null)
   const stop = useRef(null)
 
   useEffect(() => {
     if (sound === 'off') {
+      setLoading(false)
       if (master.current) master.current.gain.setTargetAtTime(0, ctxRef.current.currentTime, 0.4)
       const s = stop.current
       stop.current = null
@@ -65,7 +69,16 @@ function useAmbient(sound, volume) {
     const ctx = ctxRef.current
     ctx.resume()
     stop.current?.()
-    stop.current = makeSound(ctx, sound, master.current)
+    // 소리마다 따로 음량을 두어, 다른 소리로 바꿀 때 툭 끊기지 않고 서로 스르르 바뀌게
+    const voice = ctx.createGain()
+    voice.gain.value = 0
+    voice.connect(master.current)
+    voice.gain.setTargetAtTime(1, ctx.currentTime, 0.6)
+    const end = makeSound(ctx, sound, voice, (st) => setLoading(st === 'loading'))
+    stop.current = () => {
+      try { voice.gain.setTargetAtTime(0, ctx.currentTime, 0.3) } catch { /* 이미 닫힘 */ }
+      setTimeout(() => { end(); voice.disconnect() }, 1200)
+    }
     master.current.gain.cancelScheduledValues(ctx.currentTime)
     master.current.gain.setTargetAtTime(volume, ctx.currentTime, 0.8) // 천천히 커지게
   }, [sound]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -105,6 +118,7 @@ export default function Cry({ go }) {
   const [step, setStep] = useState('room') // room | check | after
   const [feel, setFeel] = useState(null)
   const [sound, setSound] = useState('off')
+  const [loading, setLoading] = useState(false)
   const [volume, setVolume] = useState(0.6)
   const [word, setWord] = useState(0)
   const [since] = useState(() => Date.now())
@@ -114,7 +128,7 @@ export default function Cry({ go }) {
   const [letting, setLetting] = useState(false) // 흘려보내는 중
   const [note, setNote] = useState(null) // 흘려보낸 뒤 잠깐 보여 줄 말
 
-  useAmbient(step === 'room' ? sound : 'off', volume)
+  useAmbient(step === 'room' ? sound : 'off', volume, setLoading)
   useWakeLock()
 
   // 쉼터에 있는 동안 휴대폰 상단 막대도 어둡게
@@ -172,6 +186,7 @@ export default function Cry({ go }) {
                   className={sound === s.id ? 'on' : ''} onClick={() => setSound(s.id)}>{s.label}</button>
               ))}
             </div>
+            {sound !== 'off' && loading && <small className="cry-time" role="status">소리를 불러오고 있어…</small>}
             {sound !== 'off' && (
               <label className="cry-volume">
                 <span>소리 크기</span>
