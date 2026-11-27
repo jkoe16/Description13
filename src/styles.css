@@ -631,6 +631,7 @@ body::before {
   width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
 }
 .daily-word p { min-height: 3.3em; } /* 길이가 다른 말로 바뀌어도 카드가 덜 출렁이게 */
+.word-hint { font-weight: 500; opacity: 0.7; letter-spacing: 0; }
 .daily-word small { color: var(--lavender-deep); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
 .daily-word p { font-size: 1.02rem; line-height: 1.65; }
 .journal-reply {

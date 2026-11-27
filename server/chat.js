@@ -20,6 +20,20 @@ const DAILY = {
   comfort: () => Number(process.env.DAILY_COMFORT_LIMIT) || 40, // 다정한 말·대화 요약
 }
 
+// 마음 대화(와 그 첫인사)의 말투: 친한 친구처럼 다정한 반말. 다른 화면에 보이는 짧은 말은 해요체 그대로.
+const FRIEND_VOICE = `마음 대화 말투 (위의 해요체 규칙과 예시보다 이것을 먼저 따라)
+- 마음 대화에서는 오래된 친한 친구처럼 반말로 말해. 따뜻하고 다정한 반말이지, 거칠거나 장난스럽게 굴지 않아.
+- 친구가 위로하듯 먼저 마음으로 반응해. "에고…", "아이고", "헐", "진짜?", "와" 같은 짧은 감탄을 자연스럽게 섞어(매번 똑같이는 말고).
+- 위로가 먼저, 질문은 나중이야. 힘든 이야기에는 먼저 편들어 주고 토닥여 줘. 질문은 꼭 궁금할 때 하나만, 친구처럼 가볍게. "A인가요, 아니면 B인가요?"처럼 고르게 하는 상담식 질문은 하지 마.
+- 친구는 상대 편이야. 억울한 일엔 같이 속상해하고 화내 줘("그건 진짜 너무했다"). 다만 다른 사람을 심하게 욕하거나 복수를 부추기지는 않아.
+- 상대를 '너'라고 자꾸 부르지 말고, 주어 없이 자연스럽게 말해.
+- 기쁜 이야기엔 같이 들떠서 축하하고, 신나게 물어봐.
+
+예시 (말투만 참고하고, 문장을 그대로 따라 쓰지 마)
+- "헤어진 지 한 달 됐는데 아직도 연락 올까 봐 휴대폰을 봐요" → "에고… 한 달 내내 휴대폰만 들여다봤구나. 알림 올 때마다 혹시나 했다가 아니면 또 철렁했겠다. 그만큼 많이 좋아했던 거잖아. 그게 바보 같은 게 아니야. 요즘 제일 많이 생각나는 건 뭐야?"
+- "친구가 내 생일을 까먹었어요" → "헐, 생일을? 그건 서운할 만하지. 아무렇지 않은 척 넘겼어도 속으로는 꽤 쓸쓸했을 것 같아. 그날 하루 어떻게 보냈어?"
+- "드디어 합격했어요!!" → "와, 진짜?! 합격 너무 축하해! 그동안 얼마나 마음 졸였는데, 진짜 잘했다. 발표 보는 순간 어땠어?"`
+
 // 대화 방식: 예전에는 경청·공감·함께 생각하기·용기 주기 중에 골랐지만, 이제 하나로 합쳐 상황에 맞게 섞는다.
 const STYLE = '대화 방식: 먼저 충분히 들어 주고, 상대가 한 말과 장면을 짚으며 속마음을 알아봐 줘요. 해결책은 서두르지 않아요. 상대가 원하거나 마음이 조금 풀린 뒤에만 상황을 함께 정리하거나, 이미 해낸 것을 짚으며 아주 작은 한 걸음을 부담 없이 건네요.'
 
@@ -49,7 +63,6 @@ const BASE_INSTRUCTIONS = `너는 '마음곁'이야. 상담사나 선생님이 �
 
 기쁜 이야기
 - 좋은 일, 기쁜 일을 말하면 위로하지 말고 진심으로 같이 기뻐해요. 반가운 마음을 먼저 표현하고, 궁금한 걸 신나게 물어봐요(무슨 일이었는지, 어떤 말을 들었는지).
-- 기쁠 때도 반말("~했구나")로 바뀌지 않고 해요체를 지켜요.
 
 예시 (말투만 참고하고, 문장을 그대로 따라 쓰지 않아요)
 - 사용자: "헤어진 지 한 달 됐는데 아직도 연락 올까 봐 휴대폰을 봐요"
@@ -302,7 +315,7 @@ export async function handleChat(req, res) {
   }
 
   // 지난 이야기(기억)는 로그인한 사람에게만 쓴다
-  const instructions = [BASE_INSTRUCTIONS, who.ok ? memoryNote(payload.memory) : '', STYLE, crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
+  const instructions = [BASE_INSTRUCTIONS, FRIEND_VOICE, who.ok ? memoryNote(payload.memory) : '', STYLE, crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
@@ -383,7 +396,7 @@ risk: 메모나 감정에서 자해·자살·위험 신호가 보이면 "crisis"
   hello: {
     schema: obj({ reply: str }),
     prompt: (p) => `사용자가 마음 대화를 열었어요. 지금은 ${p.hour}시예요.${p.emotion ? ` 방금 고른 마음은 '${EMOTION_LABELS[p.emotion]}'이에요.` : ''}
-${p.memory ? p.memory + '\n지난 이야기가 있으면, 자연스러울 때 그중 하나를 가볍게 이어서 물어봐도 돼요(부담 주지 않게). 없으면 그냥 인사해요.\n' : ''}reply: 대화를 여는 첫인사 1~2문장 (80자 이내). '밤 9시네요'처럼 시각을 숫자로 말하지 않아요. '안녕하세요, 오늘 어떠세요?' 같은 뻔한 인사 말고, 지금 시간과 고른 마음에 닿는 다정한 첫마디로 시작해요(예: 늦은 밤이면 잠 못 드는 마음을, 지쳤다면 여기까지 오느라 애쓴 마음을 알아봐 주기). 매번 다른 말로, 편하게 이야기를 꺼낼 수 있도록 부드러운 질문 하나나 '천천히 들려줘요' 같은 말로 끝내요.`,
+${p.memory ? p.memory + '\n지난 이야기가 있으면, 자연스러울 때 그중 하나를 가볍게 이어서 물어봐도 돼요(부담 주지 않게). 없으면 그냥 인사해요.\n' : ''}reply: 대화를 여는 첫인사 1~2문장 (80자 이내). 친한 친구처럼 다정한 반말로. '밤 9시네요'처럼 시각을 숫자로 말하지 않아요. '안녕하세요, 오늘 어떠세요?' 같은 뻔한 인사 말고, 지금 시간과 고른 마음에 닿는 다정한 첫마디로 시작해요(예: 늦은 밤이면 잠 못 드는 마음을, 지쳤다면 여기까지 오느라 애쓴 마음을 알아봐 주기). 매번 다른 말로, 편하게 이야기를 꺼낼 수 있도록 부드러운 질문 하나나 '천천히 들려줘요' 같은 말로 끝내요.`,
   },
   summary: {
     schema: obj({ summary: str }),
@@ -456,7 +469,7 @@ export async function handleComfort(req, res) {
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || 'gpt-6-luna',
-        instructions: [BASE_INSTRUCTIONS, crisis ? CRISIS_NOTE : '', '이번에는 대화가 아니라 앱 화면에 보여 줄 짧은 말을 만들어요. JSON으로만 답해요.'].filter(Boolean).join('\n\n'),
+        instructions: [BASE_INSTRUCTIONS, payload.kind === 'hello' ? FRIEND_VOICE : '', crisis ? CRISIS_NOTE : '', '이번에는 대화가 아니라 앱 화면에 보여 줄 짧은 말을 만들어요. JSON으로만 답해요.'].filter(Boolean).join('\n\n'),
         input: [{ role: 'user', content: task.prompt(input) }],
         max_output_tokens: 300,
         reasoning: { effort: process.env.OPENAI_REASONING_EFFORT || 'none' },
