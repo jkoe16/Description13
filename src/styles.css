@@ -572,6 +572,14 @@ h3 { font-size: 0.98rem; margin: 22px 0 10px; }
 .privacy ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 0.88rem; line-height: 1.6; color: var(--ink-soft); }
 .privacy b { color: var(--ink); }
 .privacy a { color: var(--lavender-deep); font-weight: 700; }
+.policy { max-width: 760px; display: grid; gap: 22px; }
+.policy h2 { font-size: 1rem; margin-bottom: 8px; }
+.policy p { font-size: 0.9rem; line-height: 1.75; color: var(--ink-soft); margin-top: 4px; }
+.policy .btn { justify-self: start; }
+.consent { display: flex; gap: 10px; align-items: flex-start; font-size: 0.86rem; line-height: 1.6; color: var(--ink-soft); text-align: left; }
+.consent input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--lavender-deep); }
+.consent .link { font-size: inherit; padding: 0; }
+.policy-links { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; }
 .notice .link { font-size: inherit; }
 
 /* ---------- 밤 모드 (밤 9시~아침 6시, 또는 휴대폰 다크 모드) ---------- */

@@ -8,10 +8,11 @@ import Rest from './pages/Rest.jsx'
 import Help from './pages/Help.jsx'
 import Account from './pages/Account.jsx'
 import Cry from './pages/Cry.jsx'
+import Policy from './pages/Policy.jsx'
 
 function readPage() {
   const id = window.location.hash.replace(/^#\/?/, '')
-  return id === 'account' || id === 'cry' || PAGES.some((p) => p.id === id) ? id : 'home'
+  return ['account', 'cry', 'privacy', 'terms'].includes(id) || PAGES.some((p) => p.id === id) ? id : 'home'
 }
 
 export default function App() {
@@ -47,6 +48,8 @@ export default function App() {
     rest: <Rest />,
     help: <Help />,
     account: <Account go={go} />,
+    privacy: <Policy kind="privacy" go={go} />,
+    terms: <Policy kind="terms" go={go} />,
   }
 
   // 눈물 쉼터는 메뉴 없이 화면 전체를 쓴다 (그동안 마음 대화는 숨겨 둔 채 남겨 둔다)
