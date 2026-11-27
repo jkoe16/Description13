@@ -1,7 +1,7 @@
 // 마음곁 대화 API: POST /api/chat
 // - OpenAI 키는 서버 환경변수(OPENAI_API_KEY)에서만 읽는다.
 // - 대화 내용은 저장하지 않고, 로그에도 남기지 않는다(상태 코드와 오류 종류만 기록).
-// - Firebase로 로그인(이메일 인증)한 사람은 누구나 쓸 수 있다. 사용료를 지키려고 한 사람이 하루에 쓸 수 있는 횟수를 제한한다.
+// - 로그인하지 않아도 누구나 쓸 수 있다. 사용료를 지키려고 하루 횟수를 제한한다(로그인한 사람은 계정마다, 아닌 사람은 인터넷 주소(IP)마다).
 import { checkUser, projectId } from './auth.js'
 
 const apiUrl = () => (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '') + '/responses'
@@ -14,16 +14,13 @@ const RATE_WINDOW_MS = 60_000
 const RATE_MAX = 12 // IP당 1분에 허용하는 요청 수
 // 한 사람이 하루에 쓸 수 있는 횟수 (ALLOWED_EMAILS에 적은 사람은 제한 없음). Render 환경변수로 바꿀 수 있다.
 const DAILY = {
-  chat: () => Number(process.env.DAILY_CHAT_LIMIT) || 60, // 마음 대화 메시지
+  chat: () => Number(process.env.DAILY_CHAT_LIMIT) || 60, // 마음 대화 메시지 (로그인한 사람)
+  guest: () => Number(process.env.DAILY_GUEST_LIMIT) || 30, // 마음 대화 메시지 (로그인하지 않은 사람, IP마다)
   comfort: () => Number(process.env.DAILY_COMFORT_LIMIT) || 40, // 다정한 말·대화 요약
 }
 
-const MODES = {
-  listen: '대화 방식: 경청. 조언이나 해결책을 내놓지 말고, 들은 내용을 짧게 되짚어 주며 더 이야기하고 싶은 만큼 이어 가도록 열린 질문을 하나만 해요.',
-  empathy: '대화 방식: 공감. 상대가 느끼는 감정에 이름을 붙여 주고, 그렇게 느끼는 것이 자연스럽다고 인정해 주세요. 해결책은 상대가 원할 때만 이야기해요.',
-  think: '대화 방식: 함께 생각하기. 답을 정해 주지 말고, 상황을 작게 나누어 볼 수 있는 질문을 하나씩 건네며 상대가 스스로 정리하도록 도와요.',
-  courage: '대화 방식: 용기 주기. 상대가 이미 해낸 것과 가진 힘을 구체적으로 짚어 주고, 원한다면 해 볼 수 있는 아주 작은 한 걸음을 부담 없이 제안해요. 과장된 응원은 피해요.',
-}
+// 대화 방식: 예전에는 경청·공감·함께 생각하기·용기 주기 중에 골랐지만, 이제 하나로 합쳐 상황에 맞게 섞는다.
+const STYLE = '대화 방식: 먼저 잘 들어 주고(들은 내용을 짧게 되짚기), 감정에 이름을 붙여 인정해 주세요. 상대가 원하거나 이야기가 충분히 나왔을 때만 상황을 함께 정리하는 질문을 하거나, 이미 해낸 것을 짚으며 아주 작은 한 걸음을 부담 없이 제안해요. 해결책을 서두르지 않아요.'
 
 const BASE_INSTRUCTIONS = `너는 '마음곁'이라는 웹 앱의 대화 상대야. 마음이 힘든 사람이 편하게 이야기하고 위로받을 수 있도록 곁에 있어 주는 역할이야.
 
@@ -233,15 +230,15 @@ export async function handleChat(req, res) {
   const forwarded = process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim()
   const ip = forwarded || req.socket.remoteAddress || 'unknown'
   if (rateLimited(ip)) return fail(res, 'rate_limited')
-  if (!projectId()) return fail(res, 'auth_setup')
-  let who
-  try {
-    who = await checkUser(req)
-  } catch {
-    console.error('[chat] auth check failed')
-    return fail(res, 'auth_check')
+  // 로그인은 없어도 된다. 로그인(이메일 인증)했으면 계정마다, 아니면 IP마다 하루 횟수를 센다.
+  let who = { ok: false }
+  if (req.headers.authorization) {
+    try {
+      who = await checkUser(req)
+    } catch {
+      console.error('[chat] auth check failed')
+    }
   }
-  if (!who.ok) return fail(res, who.code)
 
   let payload
   try {
@@ -256,7 +253,6 @@ export async function handleChat(req, res) {
   }
   const history = clean(payload?.messages)
   if (!history) return fail(res, 'bad_request')
-  const mode = MODES[payload.mode] ? payload.mode : 'listen'
 
   // 최근 사용자 메시지 3개에서 위기 표현 확인
   const crisis = history.filter((m) => m.role === 'user').slice(-3).some((m) => isCrisis(m.text))
@@ -264,9 +260,16 @@ export async function handleChat(req, res) {
   const key = process.env.OPENAI_API_KEY
   if (!key) return fail(res, 'no_key', { crisis })
   // 하루 횟수를 넘어도 위기 표현이 있으면 화면에 긴급 연락처는 띄운다
-  if (overDaily('chat', who.user)) return fail(res, 'daily_limit', { crisis })
+  const over = who.ok ? overDaily('chat', who.user) : overDaily('guest', { uid: ip })
+  if (over) {
+    return fail(res, 'daily_limit', who.ok ? { crisis } : {
+      crisis,
+      message: '오늘은 이야기를 많이 나눴어요. 로그인하면 더 이야기할 수 있고, 대화도 저장돼요. 지금 많이 힘들다면 109(24시간)에 전화해 주세요.',
+    })
+  }
 
-  const instructions = [BASE_INSTRUCTIONS, memoryNote(payload.memory), MODES[mode], crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
+  // 지난 이야기(기억)는 로그인한 사람에게만 쓴다
+  const instructions = [BASE_INSTRUCTIONS, who.ok ? memoryNote(payload.memory) : '', STYLE, crisis ? CRISIS_NOTE : '', RISK_NOTE].filter(Boolean).join('\n\n')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 

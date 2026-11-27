@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { collection, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore'
-import { CHAT_MODES, EMOTIONS } from '../data.js'
+import { EMOTIONS } from '../data.js'
 import Icon from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
 import { chatHello } from '../comfort.js'
@@ -17,6 +17,7 @@ const HISTORY = 10 // 서버로 보내는 최근 메시지 수
 
 const AUTH_ERRORS = ['login', 'not_verified', 'auth_setup']
 const SAVE_MAX = 200 // 대화 하나에 저장하는 최대 메시지 수 (보안 규칙과 같게)
+const MODE = 'together' // 대화 방식은 하나로 합침. 저장 형식(보안 규칙)에 맞추려고 이름만 남겨 둔다
 
 const greeting = (picked) => ({
   id: nextId++, from: 'bot',
@@ -41,7 +42,6 @@ const SLOW_NOTES = [
 
 export default function Chat({ mood, go }) {
   const picked = EMOTIONS.find((e) => e.id === mood)
-  const [mode, setMode] = useState('listen')
   const [text, setText] = useState('')
   const [typing, setTyping] = useState(false)
   const [slow, setSlow] = useState(0) // 답이 늦을 때 단계: 0 = 안 늦음, 1 = 5초, 2 = 15초, 3 = 30초 넘음
@@ -87,16 +87,16 @@ export default function Chat({ mood, go }) {
     if (!cloud || !started) return
     const saved = messages.filter((m) => m.from === 'me' || m.from === 'bot')
       .slice(-SAVE_MAX).map((m) => ({ from: m.from, text: m.text }))
-    const json = JSON.stringify([mode, saved])
+    const json = JSON.stringify(saved)
     if (json === lastSaved.current) return
     lastSaved.current = json
     if (!chatId.current) chatId.current = doc(collection(db, 'users', user.uid, 'chats')).id
     const title = (saved.find((m) => m.from === 'me')?.text || '대화').slice(0, 40)
-    setDoc(doc(db, 'users', user.uid, 'chats', chatId.current), { title, mode, messages: saved, updatedAt: serverTimestamp() })
+    setDoc(doc(db, 'users', user.uid, 'chats', chatId.current), { title, mode: MODE, messages: saved, updatedAt: serverTimestamp() })
       .then(() => setSaveError(false), () => setSaveError(true))
-  }, [messages, mode, cloud, started, user?.uid])
+  }, [messages, cloud, started, user?.uid])
 
-  const reset = (list, id = null, m = mode) => {
+  const reset = (list, id = null) => {
     summarize(messages, chatId.current, true) // 떠나는 대화를 기억해 둔다
     if (id) opened(id, list)
     request.current?.abort()
@@ -104,16 +104,14 @@ export default function Chat({ mood, go }) {
     setTyping(false)
     setSlow(0)
     chatId.current = id
-    lastSaved.current = id ? JSON.stringify([m, list.map(({ from, text }) => ({ from, text }))]) : ''
-    setMode(m)
+    lastSaved.current = id ? JSON.stringify(list.map(({ from, text }) => ({ from, text }))) : ''
     setMessages(list)
     setShowPast(false)
     setSaveError(false)
   }
 
   const newChat = () => reset([greeting(null)])
-  const openChat = (c) => reset((c.messages || []).map((m) => ({ id: nextId++, from: m.from, text: m.text })), c.id,
-    CHAT_MODES.some((x) => x.id === c.mode) ? c.mode : 'listen')
+  const openChat = (c) => reset((c.messages || []).map((m) => ({ id: nextId++, from: m.from, text: m.text })), c.id)
   const removeChat = (id) => {
     deleteDoc(doc(db, 'users', user.uid, 'chats', id)).catch(() => {})
     forget(id) // 그 대화의 AI 기억도 지운다
@@ -145,7 +143,7 @@ export default function Chat({ mood, go }) {
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: token ? 'Bearer ' + token : '' },
-        body: JSON.stringify({ mode, messages: history, memory: memoryFor(memory.current, chatId.current) || undefined }),
+        body: JSON.stringify({ messages: history, memory: memoryFor(memory.current, chatId.current) || undefined }),
         signal: controller.signal,
       })
       const data = await r.json().catch(() => ({}))
@@ -198,25 +196,15 @@ export default function Chat({ mood, go }) {
       <header className="page-head">
         <div>
           <h1>마음 대화</h1>
-          <p className="muted">어떤 방식으로 곁에 있어 줄까요?</p>
+          <p className="muted">무슨 이야기든 편하게 들려주세요.</p>
         </div>
         <div className="head-actions">
           {cloud && <button className={'pill' + (showPast ? ' on' : '')} aria-expanded={showPast} onClick={() => setShowPast((v) => !v)}>지난 대화</button>}
-          {cloud && started && <button className="pill" onClick={newChat}>새 대화</button>}
+          {started && <button className="pill" onClick={newChat}>새 대화</button>}
           <button className="pill" onClick={() => go('account')}>{user ? '내 계정' : '로그인'}</button>
           <button className="pill sos" onClick={() => go('help')}>위험할 땐 109</button>
         </div>
       </header>
-
-      <div className="mode-row" role="radiogroup" aria-label="대화 방식">
-        {CHAT_MODES.map((m) => (
-          <button key={m.id} role="radio" aria-checked={mode === m.id}
-            className={'mode' + (mode === m.id ? ' active' : '')} onClick={() => setMode(m.id)}>
-            <strong>{m.label}</strong>
-            <small>{m.desc}</small>
-          </button>
-        ))}
-      </div>
 
       {showPast && cloud && (
         <PastChats uid={user.uid} currentId={chatId.current} onOpen={openChat} onRemove={removeChat} />
@@ -226,7 +214,7 @@ export default function Chat({ mood, go }) {
         <p className="notice">
           {cloud
             ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
-            : 'AI가 답해요. 전문 상담을 대신할 수 없고, 대화 내용은 저장하지 않아요.'}
+            : 'AI가 답해요. 전문 상담을 대신할 수 없어요. 로그인하지 않으면 대화가 저장되지 않고, 화면을 나가면 사라져요.'}
           {' '}<button className="link" onClick={() => go('account')}>개인정보 안내</button>
         </p>
         {saveError && <p className="form-error" role="alert">대화를 저장하지 못했어요. 인터넷 연결을 확인해 주세요.</p>}
@@ -274,20 +262,13 @@ export default function Chat({ mood, go }) {
           <div ref={endRef} />
         </div>
 
-        {user === null ? (
-          <div className="login-prompt">
-            <p>마음 대화는 로그인한 뒤에 쓸 수 있어요.</p>
-            <button className="btn primary small" onClick={() => go('account')}>로그인하기</button>
-          </div>
-        ) : (
         <div className="composer">
           <textarea ref={inputRef} rows={1} value={text} placeholder="마음속 이야기를 적어 주세요"
             maxLength={MAX_CHARS} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} aria-label="메시지 입력" />
-          <button className="send" onClick={() => send()} disabled={!text.trim() || typing || !user} aria-label="보내기">
+          <button className="send" onClick={() => send()} disabled={!text.trim() || typing} aria-label="보내기">
             <Icon name="send" size={20} />
           </button>
         </div>
-        )}
         {text.length > MAX_CHARS - 100 && (
           <p className="char-count">{text.length}/{MAX_CHARS}</p>
         )}
