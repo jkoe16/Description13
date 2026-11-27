@@ -26,13 +26,6 @@ const greeting = (picked) => ({
     : chatHello(),
 })
 
-const STARTERS = [
-  '오늘 있었던 일을 이야기하고 싶어요.',
-  '요즘 마음이 복잡해요.',
-  '누군가에게 위로받고 싶어요.',
-  '그냥 편하게 이야기하고 싶어요.',
-]
-
 // 오래 쉬던 무료 서버가 깨어나는 동안 보여 주는 말. 기다림이 길어질수록 조금씩 바뀐다.
 const SLOW_NOTES = [
   '천천히 읽고 있어요. 조금만 기다려 줘요.',
@@ -240,14 +233,15 @@ export default function Chat({ mood, go, active = true }) {
       )}
 
       <section className="chat card">
-        <p className="notice">
-          {cloud
-            ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
-            : 'AI가 답해요. 전문 상담을 대신할 수 없어요. 로그인하지 않으면 대화가 저장되지 않고, 앱을 닫으면 사라져요.'}
-          {' '}<button className="link" onClick={() => go('account')}>개인정보 안내</button>
-        </p>
         {saveError && <p className="form-error" role="alert">대화를 저장하지 못했어요. 인터넷 연결을 확인해 주세요.</p>}
         <div className="messages" aria-live="polite">
+          {/* 안내는 대화와 함께 위로 밀려 올라가게 해서, 작은 화면에서도 대화 칸을 넓게 쓴다 */}
+          <p className="notice">
+            {cloud
+              ? 'AI가 답해요. 전문 상담을 대신할 수 없어요. 대화는 내 계정에 저장되고 나만 볼 수 있어요.'
+              : 'AI가 답해요. 전문 상담을 대신할 수 없어요. 로그인하지 않으면 대화가 저장되지 않고, 앱을 닫으면 사라져요.'}
+            {' '}<button className="link" onClick={() => go('account')}>개인정보 안내</button>
+          </p>
           {messages.map((m) => {
             if (m.from === 'crisis') {
               return <CrisisCard key={m.id} go={go} />
@@ -271,16 +265,6 @@ export default function Chat({ mood, go, active = true }) {
               </div>
             )
           })}
-          {!started && (
-            <div className="starters">
-              <p>이렇게 시작해 볼 수도 있어요</p>
-              <div className="starter-list">
-                {STARTERS.map((s) => (
-                  <button key={s} className="starter" onClick={() => send(s)}>{s}</button>
-                ))}
-              </div>
-            </div>
-          )}
           {typing && (
             <div className="bubble-row bot">
               <span className="avatar">곁</span>
