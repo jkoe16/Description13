@@ -3,7 +3,7 @@ import { collection, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/fi
 import { EMOTIONS } from '../data.js'
 import Icon from '../components/Icon.jsx'
 import { auth, db, useUser } from '../firebase.js'
-import { chatHello } from '../comfort.js'
+import { chatHello, moodHello } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
 import { memoryFor } from '../memory.js'
 import CrisisCard from '../components/chat/CrisisCard.jsx'
@@ -21,9 +21,7 @@ const MODE = 'together' // 대화 방식은 하나로 합침. 저장 형식(보�
 
 const greeting = (picked) => ({
   id: nextId++, from: 'bot',
-  text: picked
-    ? `'${picked.label}' 마음을 안고 여기까지 와 줬네요. 어떤 일이 있었는지, 말하고 싶은 만큼만 천천히 들려줘요.`
-    : chatHello(),
+  text: picked ? moodHello(picked.id) : chatHello(),
 })
 
 // 오래 쉬던 무료 서버가 깨어나는 동안 보여 주는 말. 기다림이 길어질수록 조금씩 바뀐다.
