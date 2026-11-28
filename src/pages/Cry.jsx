@@ -265,7 +265,7 @@ export default function Cry({ go }) {
       {step === 'after' && (
         <main className="cry-center">
           <p className="cry-word">
-            {feel === 'better' && <><span className="cry-line">조금이라도 가벼워졌다니 정말 다행이야.</span><span className="cry-line">그렇게 쏟아 낼 만큼, 그동안 많이 참아 왔던 거야.</span></>}
+            {feel === 'better' && <><span className="cry-line">조금이라도 가벼워졌다니 정말 다행이야.</span><span className="cry-line">마음을 흘려보낸 것만으로도, 정말 잘한 거야.</span></>}
             {feel === 'same' && <><span className="cry-line">그렇게 쌓인 마음이 한 번에 풀릴 리 없지.</span><span className="cry-line">아직 힘들어도 괜찮아. 혼자 견디지 않아도 돼.</span></>}
             {feel === 'unsure' && <><span className="cry-line">모르겠는 것도 괜찮아.</span><span className="cry-line">울 수 있었던 것만으로도, 마음은 조금씩 숨을 쉬어.</span></>}
           </p>
