@@ -246,12 +246,32 @@ const ERRORS = {
   too_large: [413, '보낸 내용이 너무 커요.'],
   rate_limited: [429, '잠시 천천히 이야기해 주세요. 1분 뒤에 다시 보내 주세요.'],
   auth: [502, 'AI 서비스 인증에 문제가 있어요. 관리자에게 알려 주세요.'],
-  quota: [502, 'AI 서비스 사용 한도를 넘었어요. 잠시 뒤에 다시 시도해 주세요.'],
+  quota: [502, 'AI 사용 한도(결제 금액)를 다 써서 지금은 답할 수 없어요. 관리자에게 알려 주세요. 지금 많이 힘들다면 109(24시간)에 전화해 주세요.'],
   busy: [503, 'AI가 지금 많이 바빠요. 잠시 뒤에 다시 시도해 주세요.'],
+  per_minute: [503, 'AI에 1분 동안 보낼 수 있는 양을 넘었어요. 1분쯤 숨 돌리고 다시 보내 주세요.'],
   ai_daily: [503, '오늘 AI가 답할 수 있는 횟수를 모두 써서, 내일 다시 이야기할 수 있어요. 지금 많이 힘들다면 109(24시간)에 전화해 주세요.'],
   timeout: [504, '답변이 늦어지고 있어요. 다시 시도해 주세요.'],
   upstream: [502, '답변을 받지 못했어요. 다시 시도해 주세요.'],
 }
+
+// OpenAI 오류를 읽어 둔다. 기록에는 상태·종류·OpenAI 안내문만 남기고(대화 내용은 없음), 조직 번호는 가린다.
+async function readOpenAIError(r, tag) {
+  const err = await r.json().catch(() => ({}))
+  const type = err?.error?.type || err?.error?.code || ''
+  const message = String(err?.error?.message || '').replace(/org-[\w-]+/g, 'org-***').slice(0, 220)
+  console.error(`[${tag}] OpenAI ${r.status} ${type} ${message}`.trim())
+  // 무료 등급의 하루 요청 수(RPD)에 닿으면 '잠시 뒤'가 아니라 '내일'이라고 알린다
+  const perDay = /per day|RPD|TPD/i.test(message)
+  const quota = /quota|credit|spend|billing/i.test(type + ' ' + message) && !perDay
+  // 1분 한도(RPM·TPM)는 몇 초만 기다리면 풀리는 경우가 많다
+  let wait = Number(r.headers.get('retry-after-ms')) || Number(r.headers.get('retry-after')) * 1000 || 0
+  const m = message.match(/try again in ([\d.]+)\s*(ms|s)/i)
+  if (!wait && m) wait = Number(m[1]) * (m[2].toLowerCase() === 'ms' ? 1 : 1000)
+  return { status: r.status, perDay, quota, wait }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const RETRY_MAX_WAIT_MS = 8000
 
 function fail(res, code, extra = {}) {
   const [status, message] = ERRORS[code]
@@ -338,7 +358,7 @@ export async function handleChat(req, res) {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   try {
-    const r = await fetch(apiUrl(), {
+    const ask = () => fetch(apiUrl(), {
       method: 'POST',
       signal: controller.signal,
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -352,17 +372,19 @@ export async function handleChat(req, res) {
         store: false,
       }),
     })
+    let r = await ask()
+    let info = r.ok ? null : await readOpenAIError(r, 'chat')
+    // 1분 한도에 잠깐 걸린 거면 조용히 기다렸다가 한 번만 다시 보낸다
+    if (info && info.status === 429 && !info.perDay && !info.quota) {
+      await sleep(Math.min(Math.max(info.wait, 1500), RETRY_MAX_WAIT_MS) + 300)
+      r = await ask()
+      info = r.ok ? null : await readOpenAIError(r, 'chat')
+    }
 
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}))
-      const type = err?.error?.type || err?.error?.code || ''
-      // 대화 내용은 기록하지 않고 상태와 오류 종류만 남긴다
-      console.error(`[chat] OpenAI ${r.status} ${type}`)
-      if (r.status === 401 || r.status === 403) return fail(res, 'auth', { crisis })
-      // 무료 등급은 하루 요청 수(RPD)가 정해져 있다. 그 한도에 닿으면 '잠시 뒤'가 아니라 '내일'이라고 알린다.
-      const perDay = /per day|RPD/i.test(err?.error?.message || '')
-      if (r.status === 429) return fail(res, /quota|credit|spend|usage/.test(type) ? 'quota' : perDay ? 'ai_daily' : 'busy', { crisis })
-      if (r.status >= 500) return fail(res, 'busy', { crisis })
+    if (info) {
+      if (info.status === 401 || info.status === 403) return fail(res, 'auth', { crisis })
+      if (info.status === 429) return fail(res, info.quota ? 'quota' : info.perDay ? 'ai_daily' : 'per_minute', { crisis })
+      if (info.status >= 500) return fail(res, 'busy', { crisis })
       return fail(res, 'upstream', { crisis })
     }
 
@@ -498,8 +520,8 @@ export async function handleComfort(req, res) {
       }),
     })
     if (!r.ok) {
-      console.error(`[comfort] OpenAI ${r.status}`)
-      return fail(res, r.status === 429 ? 'busy' : 'upstream', { crisis })
+      const info = await readOpenAIError(r, 'comfort')
+      return fail(res, r.status !== 429 ? 'upstream' : info.quota ? 'quota' : info.perDay ? 'ai_daily' : 'per_minute', { crisis })
     }
     const out = JSON.parse(extractText(await r.json()))
     const pick = (s, n) => (typeof s === 'string' ? s.trim().slice(0, n) : '')
