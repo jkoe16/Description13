@@ -248,7 +248,7 @@ export default function Cry({ go }) {
 
       {step === 'check' && (
         <main className="cry-center">
-          <p className="cry-word">많이 힘들었지.<br />지금은 좀 어때?</p>
+          <p className="cry-word"><span className="cry-line">많이 힘들었지.</span><span className="cry-line">지금은 좀 어때?</span></p>
           <div className="cry-choices">
             {[
               ['better', '조금 나아졌어'],
@@ -265,9 +265,9 @@ export default function Cry({ go }) {
       {step === 'after' && (
         <main className="cry-center">
           <p className="cry-word">
-            {feel === 'better' && <>조금이라도 가벼워졌다니 정말 다행이야.<br />그렇게 쏟아 낼 만큼, 그동안 많이 참아 왔던 거야.</>}
-            {feel === 'same' && <>그렇게 쌓인 마음이 한 번에 풀릴 리 없지.<br />아직 힘들어도 괜찮아. 혼자 견디지 않아도 돼.</>}
-            {feel === 'unsure' && <>모르겠는 것도 괜찮아.<br />울 수 있었던 것만으로도, 마음은 조금씩 숨을 쉬어.</>}
+            {feel === 'better' && <><span className="cry-line">조금이라도 가벼워졌다니 정말 다행이야.</span><span className="cry-line">그렇게 쏟아 낼 만큼, 그동안 많이 참아 왔던 거야.</span></>}
+            {feel === 'same' && <><span className="cry-line">그렇게 쌓인 마음이 한 번에 풀릴 리 없지.</span><span className="cry-line">아직 힘들어도 괜찮아. 혼자 견디지 않아도 돼.</span></>}
+            {feel === 'unsure' && <><span className="cry-line">모르겠는 것도 괜찮아.</span><span className="cry-line">울 수 있었던 것만으로도, 마음은 조금씩 숨을 쉬어.</span></>}
           </p>
           <p className="cry-tip">물 한 잔 천천히 마시고, 어깨에 힘을 한 번 빼 봐. 오늘 정말 수고했어.</p>
           <div className="cry-choices">
