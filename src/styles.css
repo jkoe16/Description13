@@ -677,6 +677,14 @@ p { text-wrap: pretty; }
 .cry-line { display: block; text-wrap: balance; }
 @keyframes cry-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .cry-time { color: #8f88b3; font-size: 0.82rem; }
+.cry-meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.cry-pause { padding: 6px 12px; border-radius: 999px; color: #8f88b3; font-size: 0.82rem; background: transparent; border: 1px solid rgba(217, 207, 252, 0.18); }
+.cry-pause:hover { color: #e9e5fb; border-color: rgba(217, 207, 252, 0.4); }
+.cry-pause[aria-pressed="true"] { color: #f1eeff; background: rgba(217, 207, 252, 0.16); }
+/* 데스크톱에서는 전화를 걸 수 없으니 무엇인지 글로도 알려 준다 */
+.cry-sos-desc { display: none; }
+@media (hover: hover) and (pointer: fine) { .cry-sos-desc { display: inline; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .cry-controls { display: grid; gap: 16px; justify-items: center; width: 100%; margin-top: 8px; }
 .cry-sounds { display: flex; gap: 6px; padding: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
 .cry-sounds button { white-space: nowrap; padding: 9px 16px; border-radius: 999px; color: #bdb5e0; font-size: 0.9rem; }
