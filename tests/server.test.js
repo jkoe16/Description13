@@ -8,13 +8,15 @@ const asked = [] // 가짜 AI가 받은 요청
 let fakeReply = { reply: '에고, 많이 지쳤구나.', risk: 'none' }
 let fakeStatus = 200
 let fakeError = null
+let failTimes = -1 // -1이면 계속 실패, 0보다 크면 그 횟수만큼만 fakeStatus로 실패하고 그다음엔 성공
 const fakeAI = createServer((req, res) => {
   let body = ''
   req.on('data', (c) => { body += c })
   req.on('end', () => {
     asked.push(JSON.parse(body))
     res.setHeader('Content-Type', 'application/json')
-    if (fakeStatus !== 200) {
+    if (fakeStatus !== 200 && failTimes !== 0) {
+      if (failTimes > 0) failTimes--
       res.statusCode = fakeStatus
       return res.end(JSON.stringify(fakeError))
     }
@@ -133,6 +135,32 @@ describe('OpenAI 하루 한도', () => {
     assert.equal(r.body.error, 'ai_daily')
     assert.match(r.body.message, /내일/)
     assert.equal(r.body.crisis, true)
+  })
+})
+
+describe('OpenAI 1분 한도', () => {
+  const tpm = { error: { type: 'tokens', code: 'rate_limit_exceeded', message: 'Rate limit reached for gpt-6-luna in organization org-abc123 on tokens per min (TPM): Limit 30000, Used 29000, Requested 4000. Please try again in 20ms.' } }
+  test('1분 한도에 잠깐 걸리면 조용히 기다렸다가 다시 보내서 답장을 받는다', async () => {
+    const before = asked.length
+    fakeStatus = 429; fakeError = tpm; failTimes = 1
+    const r = await chat(say('오늘 좀 지쳤어'))
+    fakeStatus = 200; failTimes = -1
+    assert.equal(r.status, 200)
+    assert.ok(r.body.reply)
+    assert.equal(asked.length - before, 2)
+  })
+  test('다시 보내도 막히면 1분 뒤에 다시 보내 달라고 알린다(바쁘다고 하지 않음)', async () => {
+    fakeStatus = 429; fakeError = tpm; failTimes = -1
+    const r = await chat(say('오늘 좀 지쳤어'))
+    fakeStatus = 200
+    assert.equal(r.body.error, 'per_minute')
+    assert.match(r.body.message, /1분/)
+  })
+  test('결제 한도(크레딧)가 없으면 그렇게 알린다', async () => {
+    fakeStatus = 429; fakeError = { error: { type: 'insufficient_quota', code: 'insufficient_quota', message: 'You exceeded your current quota, please check your plan and billing details.' } }
+    const r = await chat(say('오늘 좀 지쳤어'))
+    fakeStatus = 200
+    assert.equal(r.body.error, 'quota')
   })
 })
 
