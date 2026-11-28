@@ -6,6 +6,7 @@ import { auth, db, useUser } from '../firebase.js'
 import { chatHello, moodHello } from '../comfort.js'
 import { askComfort } from '../comfortAI.js'
 import { memoryFor } from '../memory.js'
+import { api } from '../api.js'
 import CrisisCard from '../components/chat/CrisisCard.jsx'
 import PastChats from '../components/chat/PastChats.jsx'
 import useChatMemory from '../components/chat/useChatMemory.js'
@@ -160,7 +161,7 @@ export default function Chat({ mood, go, active = true }) {
     let added = []
     try {
       const token = auth?.currentUser ? await auth.currentUser.getIdToken() : ''
-      const r = await fetch('/api/chat', {
+      const r = await fetch(api('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: token ? 'Bearer ' + token : '' },
         body: JSON.stringify({ messages: history, memory: memoryFor(memory.current, chatId.current) || undefined }),

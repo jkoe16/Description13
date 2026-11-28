@@ -1,13 +1,14 @@
 // AI에게 다정한 말을 부탁한다. 로그인하지 않았거나, 하루 횟수를 넘었거나, 실패하면 null을 돌려주고
 // 화면은 미리 써 둔 문장을 그대로 쓴다.
 import { auth } from './firebase.js'
+import { api } from './api.js'
 
 export async function askComfort(body) {
   const user = auth?.currentUser
   if (!user) return null
   try {
     const token = await user.getIdToken()
-    const r = await fetch('/api/comfort', {
+    const r = await fetch(api('/api/comfort'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ hour: new Date().getHours(), ...body }),

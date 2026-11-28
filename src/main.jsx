@@ -5,6 +5,7 @@ import App from './App.jsx'
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import './styles.css'
 import { startTheme } from './theme.js'
+import { api } from './api.js'
 
 startTheme()
 
@@ -20,7 +21,7 @@ let lastWake = 0
 const wakeServer = () => {
   if (Date.now() - lastWake < 5 * 60 * 1000) return
   lastWake = Date.now()
-  fetch('/api/health', { cache: 'no-store' }).catch(() => {})
+  fetch(api('/api/health'), { cache: 'no-store' }).catch(() => {})
 }
 wakeServer()
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wakeServer())

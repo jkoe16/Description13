@@ -61,6 +61,24 @@ Firestore 경로: `users/{uid}/journal/{id}`, `users/{uid}/chats/{id}`, `users/{
 | `DAILY_GUEST_LIMIT`, `DAILY_GUEST_TOTAL`, `DAILY_CHAT_LIMIT`, `DAILY_COMFORT_LIMIT` | 선택, 하루 횟수: 로그인 안 한 사람 대화(IP마다 기본 30, 모두 합쳐 기본 400), 로그인한 사람 대화(기본 60)·다정한 말(기본 40) |
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Firebase 웹 설정 (빌드 때 화면에 들어감) |
 | `TRUST_PROXY` | 프록시 뒤에서 운영할 때 `1` (Render에서는 따로 안 넣어도 자동으로 켜짐) |
+| `ALLOWED_ORIGINS` | 서버(maeumgyeot-vmm0)에 넣음. API를 불러도 되는 다른 화면 주소 (쉼표로 구분, 예: 정적 화면 사이트 주소). 비어 있으면 같은 주소에서만 부를 수 있음 |
+| `VITE_API_BASE` | 정적 화면 사이트에만 넣음. API 서버 주소 `https://maeumgyeot-vmm0.onrender.com` (빌드 때 화면에 들어감). 비어 있으면 같은 주소의 `/api`를 씀 |
+
+## 정적 화면 사이트 (잠들지 않는 첫 화면)
+
+무료 웹 서버는 오래 안 쓰면 잠들어서, **처음 방문한 사람**은 첫 화면까지 30초 넘게 기다릴 수 있어요(한 번 방문한 사람은 서비스 워커 덕분에 바로 열림).
+그래서 화면(HTML·JS·CSS)은 잠들지 않는 Render Static Site에서 따로 열고, 마음 대화 API만 웹 서버(maeumgyeot-vmm0)가 맡아요.
+웹 서버도 지금처럼 화면을 함께 제공하므로, 예전 주소와 이미 설치한 앱은 그대로 동작해요.
+
+처음 한 번 계정 주인이 할 일:
+1. Render → New → **Static Site** → 이 저장소 선택
+   - Build Command: `npm ci --include=dev && npm run build`
+   - Publish Directory: `dist`
+   - Environment: `VITE_FIREBASE_*` 4개(웹 서버와 같은 값) + `VITE_API_BASE=https://maeumgyeot-vmm0.onrender.com`
+   - Headers: `/sw.js`와 `/index.html`에 `Cache-Control: no-cache`, `/assets/*`에 `Cache-Control: public, max-age=31536000, immutable`
+2. 만들어진 주소(예: `https://maeumgyeot-app.onrender.com`)를 웹 서버 maeumgyeot-vmm0 → Environment → `ALLOWED_ORIGINS`에 넣고 저장
+3. Firebase 콘솔 → Authentication → 설정 → **승인된 도메인**에 새 주소의 도메인 추가 (안 하면 로그인이 막힘)
+4. 새 주소에서 로그인·마음 대화가 되는지 확인한 뒤, 사람들에게는 새 주소를 알려 주기
 
 ## 실행
 
